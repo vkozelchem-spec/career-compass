@@ -369,7 +369,10 @@ def apply_app_style() -> None:
 
         /* Stack the two chart groups on phones while keeping each control
            panel directly above the chart it controls. */
-        @media (max-width: 768px) {
+        @media
+            (max-width: 768px),
+            (pointer: coarse) and (max-width: 1600px),
+            (orientation: landscape) and (pointer: coarse) {
             div[data-testid="stHorizontalBlock"]:has(.st-key-chart_b) {
                 flex-direction: column !important;
                 gap: 0.75rem !important;

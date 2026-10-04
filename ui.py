@@ -366,6 +366,32 @@ def apply_app_style() -> None:
             }
 
         }
+
+        /* Stack the two chart groups on phones while keeping each control
+           panel directly above the chart it controls. */
+        @media (max-width: 768px) {
+            div[data-testid="stHorizontalBlock"]:has(.st-key-chart_b) {
+                flex-direction: column !important;
+                gap: 0.75rem !important;
+            }
+
+            div[data-testid="stHorizontalBlock"]:has(.st-key-chart_b)
+            > div[data-testid="column"] {
+                flex: 0 0 100% !important;
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+
+            div[data-testid="stHorizontalBlock"]:has(.st-key-chart_b)
+            > div[data-testid="column"]:nth-child(3) {
+                order: 4 !important;
+            }
+
+            div[data-testid="stHorizontalBlock"]:has(.st-key-chart_b)
+            > div[data-testid="column"]:nth-child(4) {
+                order: 3 !important;
+            }
+        }
         
         /* =========================================================
         INDICATOR LEGEND — TEST
@@ -657,16 +683,15 @@ def render_header(show_layout_control: bool = False):
                 nav_spacer,
                 nav_view,
                 nav_layout,
-                nav_dashboard,
-                nav_sources,
+                nav_section_switch,
                 nav_about,
             ) = st.columns(
-                [2.3, 1.3, 1.2, 1.2, 1.3, 1],
+                [1.8, 1.3, 2.0, 2.2, 0.9],
                 vertical_alignment="center",
             )
         else:
-            nav_spacer, nav_dashboard, nav_sources, nav_about = st.columns(
-                [5, 1.2, 1.3, 1],
+            nav_spacer, nav_section_switch, nav_about = st.columns(
+                [5, 2.2, 1],
                 vertical_alignment="center",
             )
 
@@ -703,56 +728,50 @@ def render_header(show_layout_control: bool = False):
         view_mode = None
 
     # ---------------------------------------------------------
-    # Chart layout: Grid / Vertical
+    # Chart layout: Single / Compare / Combined
     # ---------------------------------------------------------
 
     if show_layout_control:
+        if st.session_state.get("chart_layout") not in (
+            "Single", "Compare", "Combined"
+        ):
+            st.session_state.chart_layout = "Compare"
+
+        layout_labels = {
+            "Single": "One chart",
+            "Compare": "Two charts",
+            "Combined": "Merged chart",
+        }
         with nav_layout:
-            layout_label = (
-                "Grid view"
-                if st.session_state.get("chart_layout", "Vertical") == "Vertical"
-                else "Vertical view"
+            st.selectbox(
+                "Chart layout",
+                options=list(layout_labels),
+                format_func=lambda mode: layout_labels[mode],
+                key="chart_layout",
+                label_visibility="collapsed",
             )
 
-            if st.button(
-                layout_label,
-                key="nav_layout",
-                width="stretch",
-            ):
-                st.session_state.chart_layout = (
-                    "Grid"
-                    if st.session_state.get("chart_layout", "Vertical") == "Vertical"
-                    else "Vertical"
-                )
-                st.rerun()
-
-        layout_mode = st.session_state.get(
-            "chart_layout",
-            "Vertical",
-        )
-
+        layout_mode = st.session_state.chart_layout
     else:
         layout_mode = None
 
     # ---------------------------------------------------------
-    # Navigation
+    # Dashboard / Data Sources toggle
     # ---------------------------------------------------------
 
-    with nav_dashboard:
+    with nav_section_switch:
+        section_label = "Data Sources" if show_layout_control else "Dashboard"
         if st.button(
-            "Dashboard",
-            key="nav_dashboard",
+            section_label,
+            key="nav_section_switch",
             width="stretch",
         ):
-            st.switch_page("app.py")
-
-    with nav_sources:
-        if st.button(
-            "Data Sources",
-            key="nav_data_sources",
-            width="stretch",
-        ):
-            st.switch_page("pages/data_sources.py")
+            target_page = (
+                "pages/data_sources.py"
+                if show_layout_control
+                else "app.py"
+            )
+            st.switch_page(target_page)
 
     with nav_about:
         st.button(

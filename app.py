@@ -64,7 +64,8 @@ def render_chart(
     chart_number: int,
     controls_container,
     chart_container,
-) -> None:
+    render_output: bool = True,
+):
 
     controls = controls_container
 
@@ -396,36 +397,59 @@ def render_chart(
     )
 
 
-    selected_qualification = None
+    # Keep the domain selection separate from Streamlit's widget state.
+    # Widget keys are cleaned up when Chart B is hidden in Single view.
+    qualification_state_key = f"selected_qualification_{chart_number}"
+    qualification_widget_key = f"qualification_{chart_number}"
+    previous_qualification = st.session_state.get(
+        qualification_state_key,
+        st.session_state.get(qualification_widget_key),
+    )
 
-    qualification_col = controls
-
-
-    if len(qualification_options) > 1:
-        overall_qualification = next(
-            (
-                qualification
-                for qualification in ("Insgesamt", "Gesamt")
-                if qualification in qualification_options
-            ),
-            qualification_options[0],
+    # The two datasets use different names for the same overall level.
+    if previous_qualification in ("Insgesamt", "Gesamt"):
+        previous_qualification = next(
+            (q for q in ("Insgesamt", "Gesamt") if q in qualification_options),
+            previous_qualification,
         )
 
-        default_index = qualification_options.index(
-            overall_qualification
+    default_qualification = next(
+        (q for q in ("Insgesamt", "Gesamt") if q in qualification_options),
+        qualification_options[0] if qualification_options else None,
+    )
+    selected_qualification = (
+        previous_qualification
+        if previous_qualification in qualification_options
+        else default_qualification
+    )
+    st.session_state[qualification_state_key] = selected_qualification
+
+    if qualification_options:
+        # Reconcile before instantiating the widget, including singleton options.
+        st.session_state[qualification_widget_key] = selected_qualification
+
+        def remember_qualification():
+            st.session_state[qualification_state_key] = st.session_state[
+                qualification_widget_key
+            ]
+
+        selected_qualification = controls.selectbox(
+            "Qualification level",
+            qualification_options,
+            format_func=lambda q: QUALIFICATION_DISPLAY_LABELS.get(q, q),
+            key=qualification_widget_key,
+            on_change=remember_qualification,
+            disabled=len(qualification_options) == 1,
         )
-
-        with qualification_col:
-            selected_qualification = st.selectbox(
-                "Qualification level",
-                qualification_options,
-                index=default_index,
-                format_func=lambda q: QUALIFICATION_DISPLAY_LABELS.get(q, q),
-                key=f"qualification_{chart_number}",
-            )
-
-    elif len(qualification_options) == 1:
-        selected_qualification = qualification_options[0]
+    else:
+        if render_output:
+            chart_container.warning("No qualification data is available for this occupation.")
+        return {
+            "plot_df": pd.DataFrame(columns=["report_date", "indicator", "value"]),
+            "display_name": selected_name,
+            "qualification_label": "No qualification data",
+            "chart_number": chart_number,
+        }
 
     qualification_label = (
         QUALIFICATION_DISPLAY_LABELS.get(
@@ -563,8 +587,14 @@ def render_chart(
 
 
     if not selected_indicators:
-        st.info("Choose at least one indicator.")
-        return
+        if render_output:
+            chart_container.info("Choose at least one indicator.")
+        return {
+            "plot_df": pd.DataFrame(columns=["report_date", "indicator", "value"]),
+            "display_name": selected_name,
+            "qualification_label": qualification_label,
+            "chart_number": chart_number,
+        }
 
     series = []
 
@@ -639,6 +669,14 @@ def render_chart(
 
     chart_card = chart_container
 
+    chart_payload = {
+        "plot_df": plot_df,
+        "display_name": display_name,
+        "qualification_label": qualification_label,
+        "chart_number": chart_number,
+    }
+    if not render_output:
+        return chart_payload
 
     chart_card.markdown(
         f"""
@@ -737,38 +775,103 @@ def render_chart(
         )
 
 
-# Remember whether the user added a second chart.
-if "chart_count" not in st.session_state:
-    st.session_state.chart_count = 1
+def render_combined_chart(payload_a, payload_b, chart_container) -> None:
+    """Draw both independently configured selections on one shared plot."""
+    chart_container.caption("Combined chart")
+    title_a = f"{payload_a['display_name']} · {payload_a['qualification_label']}"
+    title_b = f"{payload_b['display_name']} · {payload_b['qualification_label']}"
+    chart_container.markdown(
+        f"**A:** {title_a} &nbsp;&nbsp; **B:** {title_b}"
+    )
+
+    frames = []
+    for label, payload in (("A", payload_a), ("B", payload_b)):
+        frame = payload["plot_df"].copy()
+        if not frame.empty:
+            frame["selection"] = label
+            frame["occupation_selection"] = (
+                f"{payload['display_name']} · {payload['qualification_label']}"
+            )
+            frames.append(frame)
+
+    if not frames:
+        chart_container.info("Choose at least one indicator in Controls A or Controls B.")
+        return
+
+    plot_df = pd.concat(frames, ignore_index=True)
+    color_scale = alt.Scale(
+        domain=["Registered vacancies", "Employed people", "Unemployed people", "Job seekers"],
+        range=["#E45756", "#4C78A8", "#F2CF5B", "#59A14F"],
+    )
+    chart = (
+        alt.Chart(plot_df)
+        .mark_line()
+        .encode(
+            x=alt.X("report_date:T", title=None),
+            y=alt.Y(
+                "value:Q",
+                title="Index (start = 100)" if view_mode == "Indexed" else "People / vacancies",
+            ),
+            color=alt.Color("indicator:N", scale=color_scale, title="Indicator"),
+            strokeDash=alt.StrokeDash(
+                "selection:N",
+                scale=alt.Scale(domain=["A", "B"], range=[[1, 0], [6, 3]]),
+                title="Controls",
+            ),
+            tooltip=[
+                alt.Tooltip("report_date:T", title="Date"),
+                alt.Tooltip("occupation_selection:N", title="Selection"),
+                alt.Tooltip("indicator:N", title="Indicator"),
+                alt.Tooltip("value:Q", title="Index" if view_mode == "Indexed" else "Value",
+                            format=",.1f" if view_mode == "Indexed" else ",.0f"),
+            ],
+        )
+        .properties(height=460)
+        .interactive()
+    )
+    chart_container.altair_chart(chart, width="stretch")
 
 
-workspace_left, workspace_right = st.columns(
-    [0.8, 3.2],
-    gap="medium",
-)
-
-with workspace_left:
-    controls_1 = st.container(border=True)
-
-with workspace_right:
-    chart_1 = st.container(border=True)
-
-render_chart(
-    chart_number=1,
-    controls_container=controls_1,
-    chart_container=chart_1,
-)
-
-# button_col_1, button_col_2 = st.columns([1, 1])
-
-# with button_col_1:
-#     if st.button("➕ Add chart"):
-#         st.session_state.chart_count += 1
-#         st.rerun()
-
-# with button_col_2:
-#     if st.session_state.chart_count > 1:
-#         if st.button("✕ Remove chart"):
-#             st.session_state.chart_count -= 1
-#             st.rerun()
-
+# Controls and chart output adapt to the selected workspace layout.
+if layout_mode == "Compare":
+    controls_a_col, chart_a_col, chart_b_col, controls_b_col = st.columns(
+        [1.1, 2.4, 2.4, 1.1], gap="medium"
+    )
+    with controls_a_col:
+        controls_a = st.container(border=True, key="controls_a")
+    with chart_a_col:
+        chart_a = st.container(border=True, key="chart_a")
+    with chart_b_col:
+        chart_b = st.container(border=True, key="chart_b")
+    with controls_b_col:
+        controls_b = st.container(border=True, key="controls_b")
+    controls_a.caption("Controls A")
+    chart_a.caption("Chart A")
+    chart_b.caption("Chart B")
+    controls_b.caption("Controls B")
+    render_chart(1, controls_a, chart_a)
+    render_chart(2, controls_b, chart_b)
+elif layout_mode == "Combined":
+    controls_a_col, chart_col, controls_b_col = st.columns(
+        [1.1, 5.8, 1.1], gap="medium"
+    )
+    with controls_a_col:
+        controls_a = st.container(border=True, key="controls_a")
+    with chart_col:
+        combined_chart = st.container(border=True, key="combined_chart")
+    with controls_b_col:
+        controls_b = st.container(border=True, key="controls_b")
+    controls_a.caption("Controls A")
+    controls_b.caption("Controls B")
+    payload_a = render_chart(1, controls_a, None, render_output=False)
+    payload_b = render_chart(2, controls_b, None, render_output=False)
+    render_combined_chart(payload_a, payload_b, combined_chart)
+else:
+    controls_col, chart_col = st.columns([1.1, 6.9], gap="medium")
+    with controls_col:
+        controls_a = st.container(border=True, key="controls_a")
+    with chart_col:
+        chart_a = st.container(border=True, key="chart_a")
+    controls_a.caption("Controls A")
+    chart_a.caption("Chart A")
+    render_chart(1, controls_a, chart_a)

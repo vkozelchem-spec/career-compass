@@ -688,7 +688,7 @@ def render_header(show_layout_control: bool = False):
             if st.button(
                 view_label,
                 key="nav_view",
-                use_container_width=True,
+                width="stretch",
             ):
                 st.session_state.global_view_mode = (
                     "Indexed"
@@ -717,7 +717,7 @@ def render_header(show_layout_control: bool = False):
             if st.button(
                 layout_label,
                 key="nav_layout",
-                use_container_width=True,
+                width="stretch",
             ):
                 st.session_state.chart_layout = (
                     "Grid"
@@ -742,7 +742,7 @@ def render_header(show_layout_control: bool = False):
         if st.button(
             "Dashboard",
             key="nav_dashboard",
-            use_container_width=True,
+            width="stretch",
         ):
             st.switch_page("app.py")
 
@@ -750,7 +750,7 @@ def render_header(show_layout_control: bool = False):
         if st.button(
             "Data Sources",
             key="nav_data_sources",
-            use_container_width=True,
+            width="stretch",
         ):
             st.switch_page("pages/data_sources.py")
 
@@ -758,7 +758,7 @@ def render_header(show_layout_control: bool = False):
         st.button(
             "About",
             key="nav_about",
-            use_container_width=True,
+            width="stretch"
         )
 
     return layout_mode, view_mode

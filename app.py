@@ -24,7 +24,7 @@ def load_employed_data() -> pd.DataFrame:
 st.set_page_config(page_title="Explore labour market", page_icon="🧭", layout="wide")
 
 apply_app_style()
-layout_mode = render_header(show_layout_control=True)
+layout_mode, view_mode = render_header(show_layout_control=True)
 
 
 #st.title("Explore the labour market")
@@ -58,92 +58,329 @@ if missing_columns:
     )
     st.stop()
 
-# Keep only actual occupation-code rows, excluding aggregate/header rows.
-OCCUPATION_LEVEL_LABELS = {
-    0: "Entire",
-    1: "Broad (1-digit)",
-    2: "Groups (2-digit)",
-    3: "Detailed (3-digit)",
-}
 
 
 def render_chart(
     chart_number: int,
-    compact: bool = False,
+    controls_container,
+    chart_container,
 ) -> None:
 
-    settings = st.expander(
-        f"Chart {chart_number} settings",
-        expanded=True,
+    controls = controls_container
+
+
+    # ---------------------------------------------------------
+    # Occupation browser
+    # ---------------------------------------------------------
+
+    occupations = (
+        df.loc[
+            df["is_occupation_code"].fillna(False),
+            [
+                "occupation_code",
+                "occupation_name",
+                "occupation_level",
+            ],
+        ]
+        .dropna()
+        .drop_duplicates()
+        .copy()
     )
 
-    selected_occupation_level = settings.segmented_control(
-        "Occupation level",
-        options=[0, 1, 2, 3],
-        default=0,
-        format_func=lambda level: OCCUPATION_LEVEL_LABELS[level],
-        key=f"occupation_level_{chart_number}",
+    occupations["occupation_code"] = (
+        occupations["occupation_code"].astype(str)
     )
 
-    if selected_occupation_level == 0:
-        selected_code = "DE"
-        selected_name = "Germany"
+    GERMANY_CODE = "DE"
+    GERMANY_LABEL = "Germany — All occupations"
 
+
+    # ---------------------------------------------------------
+    # Occupation state
+    # ---------------------------------------------------------
+
+    selected_code_key = f"selected_occupation_code_{chart_number}"
+
+    if selected_code_key not in st.session_state:
+        st.session_state[selected_code_key] = GERMANY_CODE
+
+
+    # ---------------------------------------------------------
+    # Helper functions
+    # ---------------------------------------------------------
+
+    def get_occupation_row(code):
+        if code == GERMANY_CODE:
+            return None
+
+        rows = occupations.loc[
+            occupations["occupation_code"] == str(code)
+        ]
+
+        if rows.empty:
+            return None
+
+        return rows.iloc[0]
+
+
+    def get_children(parent_code):
+        """
+        Return only the direct children of the current node.
+
+        Germany -> level 1
+        1       -> level 2 codes starting with 1
+        11      -> level 3 codes starting with 11
+        etc.
+        """
+
+        if parent_code is None:
+            children = occupations.loc[
+                occupations["occupation_level"] == 1
+            ].copy()
+
+        else:
+            parent_row = get_occupation_row(parent_code)
+
+            if parent_row is None:
+                return occupations.iloc[0:0].copy()
+
+            parent_level = int(parent_row["occupation_level"])
+            child_level = parent_level + 1
+
+            children = occupations.loc[
+                (occupations["occupation_level"] == child_level)
+                & (
+                    occupations["occupation_code"]
+                    .str.startswith(str(parent_code))
+                )
+            ].copy()
+
+        return children.sort_values("occupation_code")
+
+
+    def get_parent_code(code):
+        row = get_occupation_row(code)
+
+        if row is None:
+            return None
+
+        code = str(code)
+        level = int(row["occupation_level"])
+
+        if level <= 1:
+            return None
+
+        possible_parents = occupations.loc[
+            occupations["occupation_level"] == level - 1
+        ].copy()
+
+        possible_parents = possible_parents.loc[
+            possible_parents["occupation_code"]
+            .astype(str)
+            .apply(
+                lambda parent_code:
+                code.startswith(parent_code)
+            )
+        ]
+
+        if possible_parents.empty:
+            return None
+
+        return (
+            possible_parents
+            .assign(
+                code_length=(
+                    possible_parents["occupation_code"]
+                    .astype(str)
+                    .str.len()
+                )
+            )
+            .sort_values(
+                "code_length",
+                ascending=False,
+            )
+            .iloc[0]["occupation_code"]
+        )
+
+
+    # ---------------------------------------------------------
+    # Occupation
+    # ---------------------------------------------------------
+
+    controls.markdown(
+        '<p style="font-size: 14px; font-weight: 600; '
+        'margin: 0 0 8px 0;">Occupation</p>',
+        unsafe_allow_html=True,
+    )
+
+
+    selected_code = st.session_state[selected_code_key]
+
+    if selected_code != GERMANY_CODE:
+        if controls.button(
+            "‹ Back",
+            key=f"occupation_back_{chart_number}",
+            type="tertiary",
+        ):
+            parent_code = get_parent_code(selected_code)
+
+            if parent_code is None:
+                st.session_state[selected_code_key] = GERMANY_CODE
+            else:
+                st.session_state[selected_code_key] = str(parent_code)
+
+            st.rerun()
+
+    # ---------------------------------------------------------
+    # Global search
+    # ---------------------------------------------------------
+
+    search_codes = (
+        occupations["occupation_code"]
+        .astype(str)
+        .tolist()
+    )
+
+    search_names = dict(
+        zip(
+            occupations["occupation_code"].astype(str),
+            occupations["occupation_name"].astype(str),
+        )
+    )
+
+    search_options = [None, GERMANY_CODE] + search_codes
+
+    search_key = (
+        f"occupation_search_"
+        f"{chart_number}_{st.session_state[selected_code_key]}"
+    )
+
+    searched_code = controls.selectbox(
+        "Search occupations",
+        search_options,
+        index=0,
+        format_func=lambda code: (
+            "🔎︎ Search all occupations..."
+            if code is None
+            else GERMANY_LABEL
+            if code == GERMANY_CODE
+            else search_names[code]
+        ),
+        key=search_key,
+        label_visibility="collapsed",
+    )
+
+    if (
+        searched_code is not None
+        and str(searched_code)
+        != str(st.session_state[selected_code_key])
+    ):
+        st.session_state[selected_code_key] = str(searched_code)
+        st.rerun()
+
+
+    # ---------------------------------------------------------
+    # Browse by category
+    # ---------------------------------------------------------
+
+    selected_code = str(
+        st.session_state[selected_code_key]
+    )
+
+    if selected_code == GERMANY_CODE:
+        browse_parent = None
     else:
-        occupations = (
-            df.loc[
-                df["is_occupation_code"].fillna(False)
-                & (df["occupation_level"] == selected_occupation_level),
-                [
-                    "occupation_code",
-                    "occupation_name",
-                ],
-            ]
-            .dropna()
-            .drop_duplicates()
-            .sort_values(["occupation_name", "occupation_code"])
+        browse_parent = selected_code
+
+    children = get_children(browse_parent)
+
+    if not children.empty:
+
+        child_codes = (
+            children["occupation_code"]
+            .astype(str)
+            .tolist()
         )
 
-        occupations["label"] = (
-            occupations["occupation_code"].astype(str)
-            + " — "
-            + occupations["occupation_name"].astype(str)
+        child_names = dict(
+            zip(
+                children["occupation_code"].astype(str),
+                children["occupation_name"].astype(str),
+            )
         )
 
-        selected_label = settings.selectbox(
-            "Occupation",
-            occupations["label"].tolist(),
-            index=None,
-            placeholder="Choose an occupation",
-            key=f"occupation_{chart_number}",
-            width=440,
+        child_options = [None] + child_codes
+
+        browse_key = (
+            f"occupation_browse_"
+            f"{chart_number}_{selected_code}"
         )
 
-        if selected_label is None:
-            st.info("Choose an occupation to explore the labour market.")
-            return
+        selected_child = controls.selectbox(
+            "Browse by category",
+            child_options,
+            index=0,
+            format_func=lambda code: (
+                "🔎︎ Browse by category"
+                if code is None
+                else child_names[code]
+            ),
+            key=browse_key,
+            label_visibility="collapsed",
+        )
 
-        selected_row = occupations.loc[
-            occupations["label"] == selected_label
-        ].iloc[0]
+        if selected_child is not None:
+            st.session_state[selected_code_key] = str(
+                selected_child
+            )
 
-        selected_code = selected_row["occupation_code"]
-        selected_name = selected_row["occupation_name"]
+            st.rerun()
 
 
-    if selected_occupation_level == 0:
+    # ---------------------------------------------------------
+    # Resolve selected occupation for the existing chart code
+    # ---------------------------------------------------------
+
+    selected_code = st.session_state[selected_code_key]
+
+    if selected_code == GERMANY_CODE:
+
+        selected_name = "Germany"
+        selected_occupation_level = 0
+
         occupation_df = df.loc[
             (df["occupation_level"] == 0)
-            & (df["occupation_code"].astype(str) == "DE")
+            & (
+                df["occupation_code"].astype(str)
+                == GERMANY_CODE
+            )
         ].copy()
 
     else:
+
+        selected_row = get_occupation_row(selected_code)
+
+        selected_name = selected_row["occupation_name"]
+        selected_occupation_level = int(
+            selected_row["occupation_level"]
+        )
+
         occupation_df = df.loc[
             df["is_occupation_code"].fillna(False)
-            & (df["occupation_code"] == selected_code)
-            & (df["occupation_name"] == selected_name)
-            & (df["occupation_level"] == selected_occupation_level)
-            ].copy()
+            & (
+                df["occupation_code"].astype(str)
+                == str(selected_code)
+            )
+            & (
+                df["occupation_name"].astype(str)
+                == str(selected_name)
+            )
+            & (
+                df["occupation_level"]
+                == selected_occupation_level
+            )
+        ].copy()
+
 
     QUALIFICATION_DISPLAY_LABELS = {
         "Insgesamt": "Overall",
@@ -161,14 +398,8 @@ def render_chart(
 
     selected_qualification = None
 
-    if compact:
-        qualification_col, view_col, _ = settings.columns(
-            [1.4, 1.6, 2.22]
-        )
-    else:
-        qualification_col, view_col, _ = settings.columns(
-            [177, 180, 1000]
-        )
+    qualification_col = controls
+
 
     if len(qualification_options) > 1:
         overall_qualification = next(
@@ -289,39 +520,47 @@ def render_chart(
         },
     }
 
-    indicator_labels = {
-        "Vacancies": "Registered vacancies",
-        "Employed": "Employed people",
-        "Unemployed": "Unemployed people",
-        "Job seekers": "Job seekers",
-    }
-
-    default_labels = (
-        ["Vacancies"]
-        if chart_number == 1
-        else ["Employed"]
-    )
-
-    selected_labels = settings.segmented_control(
-        "Indicators",
-        options=list(indicator_labels.keys()),
-        default=default_labels,
-        selection_mode="multi",
-        key=f"indicators_{chart_number}",
-    )
-
-    selected_indicators = [
-        indicator_labels[label]
-        for label in selected_labels
+    indicator_controls = [
+        ("Vacancies", "Registered vacancies", "🔴"),
+        ("Employed", "Employed people", "🔵"),
+        ("Unemployed", "Unemployed people", "🟡"),
+        ("Job seekers", "Job seekers", "🟢"),
     ]
 
-    with view_col:
-        view_mode = st.segmented_control(
-            "View",
-            options=["Absolute", "Indexed"],
-            default="Absolute",
-            key=f"view_mode_{chart_number}",
+    controls.markdown(
+        '<p style="font-size: 14px; font-weight: 600; margin: 0 0 8px 0;">Indicators</p>',
+        unsafe_allow_html=True,
+    )
+
+
+
+    selected_indicators = []
+
+    for label, indicator, dot in indicator_controls:
+        state_key = f"indicator_state_{chart_number}_{label}"
+
+        if state_key not in st.session_state:
+            st.session_state[state_key] = label != "Job seekers"
+
+        is_selected = st.session_state[state_key]
+
+        button_label = (
+            f"{dot}  {label}"
+            if is_selected
+            else f"  ◯   {label}"
         )
+
+        if controls.button(
+            button_label,
+            key=f"indicator_button_{chart_number}_{label}",
+            use_container_width=True,
+        ):
+            st.session_state[state_key] = not is_selected
+            st.rerun()
+
+        if is_selected:
+            selected_indicators.append(indicator)
+
 
     if not selected_indicators:
         st.info("Choose at least one indicator.")
@@ -393,12 +632,12 @@ def render_chart(
     )
 
     display_name = (
-    "Entire"
-    if selected_occupation_level == 0
-    else selected_name
+        "Germany — All occupations"
+        if selected_occupation_level == 0
+        else selected_name
     )
 
-    chart_card = st.container(border=True)
+    chart_card = chart_container
 
 
     chart_card.markdown(
@@ -453,7 +692,7 @@ def render_chart(
             .encode(
                 x=alt.X(
                     "report_date:T",
-                    title="Date",
+                    title=None,
                 ),
                 y=alt.Y(
                     "value:Q",
@@ -462,7 +701,7 @@ def render_chart(
                 color=alt.Color(
                     "indicator:N",
                     scale=color_scale,
-                    title="Indicator",
+                    legend=None,
                 ),
                 tooltip=[
                     alt.Tooltip(
@@ -487,7 +726,7 @@ def render_chart(
                 ],
             )
             .properties(
-                height=350,
+                height=460,
             )
             .interactive()
         )
@@ -503,33 +742,33 @@ if "chart_count" not in st.session_state:
     st.session_state.chart_count = 1
 
 
-if layout_mode == "Grid":
-    chart_columns = st.columns(2)
+workspace_left, workspace_right = st.columns(
+    [0.8, 3.2],
+    gap="medium",
+)
 
-    for chart_number in range(
-        1,
-        st.session_state.chart_count + 1,
-    ):
-        with chart_columns[(chart_number - 1) % 2]:
-            render_chart(chart_number, compact=True)
+with workspace_left:
+    controls_1 = st.container(border=True)
 
-else:
-    for chart_number in range(
-        1,
-        st.session_state.chart_count + 1,
-    ):
-        render_chart(chart_number)
+with workspace_right:
+    chart_1 = st.container(border=True)
 
-button_col_1, button_col_2 = st.columns([1, 1])
+render_chart(
+    chart_number=1,
+    controls_container=controls_1,
+    chart_container=chart_1,
+)
 
-with button_col_1:
-    if st.button("➕ Add chart"):
-        st.session_state.chart_count += 1
-        st.rerun()
+# button_col_1, button_col_2 = st.columns([1, 1])
 
-with button_col_2:
-    if st.session_state.chart_count > 1:
-        if st.button("✕ Remove chart"):
-            st.session_state.chart_count -= 1
-            st.rerun()
+# with button_col_1:
+#     if st.button("➕ Add chart"):
+#         st.session_state.chart_count += 1
+#         st.rerun()
+
+# with button_col_2:
+#     if st.session_state.chart_count > 1:
+#         if st.button("✕ Remove chart"):
+#             st.session_state.chart_count -= 1
+#             st.rerun()
 

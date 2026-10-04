@@ -381,19 +381,20 @@ def apply_app_style() -> None:
             }
 
             div[data-testid="stHorizontalBlock"]:has(.st-key-chart_b)
-            > div[data-testid="column"] {
-                flex: 0 0 100% !important;
+            > div[data-testid="stColumn"] {
+                flex: 0 0 auto !important;
                 width: 100% !important;
+                max-width: 100% !important;
                 min-width: 0 !important;
             }
 
             div[data-testid="stHorizontalBlock"]:has(.st-key-chart_b)
-            > div[data-testid="column"]:nth-child(3) {
+            > div[data-testid="stColumn"]:nth-child(3) {
                 order: 4 !important;
             }
 
             div[data-testid="stHorizontalBlock"]:has(.st-key-chart_b)
-            > div[data-testid="column"]:nth-child(4) {
+            > div[data-testid="stColumn"]:nth-child(4) {
                 order: 3 !important;
             }
         }

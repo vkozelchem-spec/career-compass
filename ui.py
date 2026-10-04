@@ -372,7 +372,9 @@ def apply_app_style() -> None:
         @media
             (max-width: 768px),
             (pointer: coarse) and (max-width: 1600px),
-            (orientation: landscape) and (pointer: coarse) {
+            (any-pointer: coarse) and (max-width: 1600px),
+            (orientation: landscape) and (pointer: coarse),
+            (orientation: landscape) and (max-height: 700px) {
             div[data-testid="stHorizontalBlock"]:has(.st-key-chart_b) {
                 flex-direction: column !important;
                 gap: 0.75rem !important;

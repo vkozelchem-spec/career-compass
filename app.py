@@ -553,7 +553,7 @@ def render_chart(
         if controls.button(
             button_label,
             key=f"indicator_button_{chart_number}_{label}",
-            use_container_width=True,
+            width="stretch",
         ):
             st.session_state[state_key] = not is_selected
             st.rerun()
@@ -733,7 +733,7 @@ def render_chart(
 
         chart_card.altair_chart(
             chart,
-            use_container_width=True,
+            width="stretch",
         )
 
 

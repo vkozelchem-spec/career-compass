@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import streamlit as st
+from lme_brand import lme_compass_button_style
 
 
 ASSETS_DIR = Path(__file__).parent / "assets"
@@ -681,7 +682,10 @@ def render_header(show_layout_control: bool = False):
     )
 
     with header_logo:
-        st.image(LOGO_PATH, width=120)
+        st.markdown(lme_compass_button_style(), unsafe_allow_html=True)
+        if st.button("LME", key="lme_home_button", type="tertiary", help="Open Welcome"):
+            st.session_state["lme_screen"] = "welcome"
+            st.switch_page("app.py")
 
     with header_nav:
         if show_layout_control:

@@ -1,5 +1,6 @@
 from pathlib import Path
 from ui import apply_app_style, render_header
+from lme_welcome import render_welcome
 
 import pandas as pd
 import streamlit as st
@@ -24,8 +25,30 @@ def load_employed_data() -> pd.DataFrame:
 st.set_page_config(page_title="Explore labour market", page_icon="🧭", layout="wide")
 
 apply_app_style()
-layout_mode, view_mode = render_header(show_layout_control=True)
 
+# Welcome / Explorer navigation
+if "lme_screen" not in st.session_state:
+    st.session_state.lme_screen = "welcome"
+
+
+def open_explorer():
+    st.session_state.lme_screen = "explorer"
+    st.rerun()
+
+
+def open_about():
+    st.switch_page("pages/data_sources.py")
+
+
+if st.session_state.lme_screen == "welcome":
+    render_welcome(
+        on_explore=open_explorer,
+        on_about=open_about,
+    )
+    st.stop()
+
+# Main Explorer
+layout_mode, view_mode = render_header(show_layout_control=True)
 
 #st.title("Explore the labour market")
 

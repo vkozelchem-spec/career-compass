@@ -102,7 +102,7 @@ _WELCOME_STYLE = """
     background: #e9ebef !important;
     color: #171717 !important;
 }
-/* Bounded CTA on desktop, full width on mobile. */
+/* Full-width CTA on both desktop and mobile. */
 .st-key-lme_welcome_explore { max-width: none; }
 .st-key-lme_welcome_explore button {
     background: #e30613 !important;
@@ -122,6 +122,41 @@ _WELCOME_STYLE = """
 .st-key-lme_welcome_skip_area {
     padding-top: .45rem;
     padding-bottom: 1rem;
+}
+/* On desktop the secondary preference sits ABOVE the primary CTA.
+   There is still only one checkbox and one persistent widget key.
+   Reverse only the Streamlit vertical block containing BOTH action elements. */
+@media (min-width: 769px) {
+    .lme-welcome-grid {
+        /* Lift the heading, preview, and benefits slightly to make room. */
+        margin-top: clamp(.6rem, 1.4vh, 1rem);
+        margin-bottom: .4rem;
+    }
+    .st-key-lme_welcome_actions[data-testid="stVerticalBlock"]:has(.st-key-lme_welcome_explore):has(.st-key-lme_welcome_skip_area),
+    .st-key-lme_welcome_actions [data-testid="stVerticalBlock"]:has(.st-key-lme_welcome_explore):has(.st-key-lme_welcome_skip_area) {
+        display: flex !important;
+        flex-direction: column-reverse !important;
+    }
+    .st-key-lme_welcome_skip_area {
+        padding-top: 0;
+        padding-bottom: .35rem;
+    }
+}
+/* Larger, more readable feature list on desktop; mobile stays unchanged. */
+@media (min-width: 1024px) {
+    .lme-welcome-benefit {
+        font-size: clamp(1.125rem, 1.15vw, 1.25rem);
+        line-height: 1.45;
+        margin-bottom: 1.2rem;
+        gap: .85rem;
+    }
+    .lme-welcome-dot {
+        flex: 0 0 9px;
+        width: 9px;
+        height: 9px;
+        margin-top: .58em;
+        margin-right: .45rem;
+    }
 }
 @media (max-width: 768px) {
     .lme-welcome-grid {

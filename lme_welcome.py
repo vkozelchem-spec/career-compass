@@ -1,8 +1,7 @@
 """Responsive LME welcome screen.
 
 Independent from the data-loading/chart logic. The caller owns navigation.
-The 'Don't show this again' checkbox is session-only until browser-side
-persistence is implemented in a separate step.
+Browser persistence is handled by the app-level preference callback.
 """
 
 from typing import Callable
@@ -172,9 +171,19 @@ _WELCOME_CONTENT = """
 """
 
 
-def render_welcome(on_explore: Callable[[], None], on_about: Callable[[], None]) -> bool:
-    """Render the welcome screen and return the current session checkbox value."""
+def render_welcome(
+    on_explore: Callable[[], None],
+    on_about: Callable[[], None],
+    skip_default: bool = False,
+    on_skip_change: Callable[[], None] | None = None,
+) -> bool:
+    """Render Welcome, keeping the checkbox in sync with the saved preference."""
     st.markdown(_WELCOME_STYLE, unsafe_allow_html=True)
+
+    # Streamlit removes widget state when an element is not rendered, e.g. while
+    # Explorer is visible. Restore it from the app-level preference on return.
+    if "lme_skip_welcome" not in st.session_state:
+        st.session_state.lme_skip_welcome = skip_default
 
     with st.container(key="lme_welcome_header"):
         brand_col, about_col = st.columns([5, 1], vertical_alignment="center")
@@ -192,7 +201,11 @@ def render_welcome(on_explore: Callable[[], None], on_about: Callable[[], None])
     st.markdown(_WELCOME_CONTENT, unsafe_allow_html=True)
 
     with st.container(key="lme_welcome_actions"):
-        skip = st.checkbox("Don't show this again", key="lme_skip_welcome", value=False)
+        skip = st.checkbox(
+            "Don't show this again",
+            key="lme_skip_welcome",
+            on_change=on_skip_change,
+        )
         if st.button("Start exploring →", key="lme_welcome_explore", width="stretch"):
             on_explore()
 

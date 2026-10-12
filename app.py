@@ -26,9 +26,36 @@ st.set_page_config(page_title="Explore labour market", page_icon="🧭", layout=
 
 apply_app_style()
 
-# Welcome / Explorer navigation
+# Browser-side preference storage. A v2 component reads and writes localStorage
+# on the same browser origin. No user setting is stored on the shared server.
+from lme_browser_storage import browser_skip_welcome
+
+# Keep this component mounted on both Welcome and Explorer. Otherwise Streamlit
+# could clean up its widget state while the other screen is visible.
+stored_skip = browser_skip_welcome(
+    write=st.session_state.get("lme_browser_write")
+)
+
+if "lme_skip_preference" not in st.session_state:
+    # First browser connection: wait for localStorage before choosing a screen.
+    # Do not momentarily show Welcome to people who requested to skip it.
+    if stored_skip is None:
+        st.caption("Loading preferences…")
+        st.stop()
+    st.session_state.lme_skip_preference = bool(stored_skip)
+
 if "lme_screen" not in st.session_state:
-    st.session_state.lme_screen = "welcome"
+    st.session_state.lme_screen = (
+        "explorer" if st.session_state.lme_skip_preference else "welcome"
+    )
+
+
+def on_skip_welcome_change():
+    # Streamlit removes the checkbox widget key while Explorer is displayed.
+    # Preserve the domain preference separately and queue a browser write.
+    skip = bool(st.session_state.lme_skip_welcome)
+    st.session_state.lme_skip_preference = skip
+    st.session_state.lme_browser_write = skip
 
 
 def open_explorer():
@@ -44,6 +71,8 @@ if st.session_state.lme_screen == "welcome":
     render_welcome(
         on_explore=open_explorer,
         on_about=open_about,
+        skip_default=st.session_state.lme_skip_preference,
+        on_skip_change=on_skip_welcome_change,
     )
     st.stop()
 

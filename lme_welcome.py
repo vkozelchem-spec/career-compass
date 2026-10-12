@@ -118,19 +118,33 @@ _WELCOME_STYLE = """
     color: #fff !important;
 }
 .st-key-lme_welcome_actions { max-width: 1450px; margin: 0 auto; }
+/* The persistent preference is secondary: keep it below the primary CTA. */
+.st-key-lme_welcome_skip_area {
+    padding-top: .45rem;
+    padding-bottom: 1rem;
+}
 @media (max-width: 768px) {
     .lme-welcome-grid {
         grid-template-columns: minmax(0, 1fr);
         grid-template-areas: "heading" "graph" "benefits";
-        row-gap: 1.25rem;
-        margin-top: 1.4rem;
-        margin-bottom: .8rem;
+        /* Keep comfortable separation from the LME/About header,
+           while reducing the space between the headline and preview. */
+        row-gap: .5rem;
+        margin-top: -1.15rem;
+        margin-bottom: .1rem;
     }
     .lme-welcome-heading, .lme-welcome-benefits { align-self: auto; }
+    /* Fine-tune only the mobile composition. Desktop stays untouched. */
+    .lme-welcome-graph { margin-top: -.55rem; }
     .lme-welcome-headline { font-size: clamp(2rem, 8.4vw, 2.5rem); }
     .lme-welcome-preview { padding: .65rem .55rem .3rem; border-radius: 16px; }
     .lme-welcome-benefit { font-size: .92rem; margin-bottom: .68rem; }
     .st-key-lme_welcome_explore { max-width: none; }
+    /* Keep the lower-right Streamlit hosting badge away from the checkbox. */
+    .st-key-lme_welcome_skip_area {
+        padding-right: 5.5rem;
+        padding-bottom: max(4.5rem, env(safe-area-inset-bottom));
+    }
 }
 </style>
 """
@@ -201,12 +215,13 @@ def render_welcome(
     st.markdown(_WELCOME_CONTENT, unsafe_allow_html=True)
 
     with st.container(key="lme_welcome_actions"):
-        skip = st.checkbox(
-            "Don't show this again",
-            key="lme_skip_welcome",
-            on_change=on_skip_change,
-        )
         if st.button("Start exploring →", key="lme_welcome_explore", width="stretch"):
             on_explore()
+        with st.container(key="lme_welcome_skip_area"):
+            skip = st.checkbox(
+                "Don't show this again",
+                key="lme_skip_welcome",
+                on_change=on_skip_change,
+            )
 
     return skip

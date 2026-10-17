@@ -79,6 +79,254 @@ if st.session_state.lme_screen == "welcome":
 # Main Explorer
 layout_mode, view_mode = render_header(show_layout_control=True)
 
+# Explorer only: V9 placement for Streamlit's NATIVE Altair toolbar.
+# Keep the V6 chart spacing and stable hover behaviour; move only the toolbar
+# above the plotting surface in One/Two views. Overlay has its own title-row offset.
+# This uses Streamlit DOM selectors and requires visual browser verification.
+st.html(
+    """<style>
+    @media (min-width: 1061px) {
+        :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+        [data-testid="stArrowVegaLiteChart"] {
+            padding-top: 36px !important;
+            box-sizing: border-box !important;
+        }
+
+        /* Keep normal widget coordinates; no negative chart margins. */
+        :is(.st-key-chart_a, .st-key-chart_b)
+        [data-testid="stArrowVegaLiteChart"] {
+            margin-top: 0 !important;
+            overflow: visible !important;
+        }
+
+        /* The chart and toolbar should be able to paint above the plot. */
+        :is(.st-key-chart_a, .st-key-chart_b)
+        :is([data-testid="stVegaLiteChart"],
+            [data-testid="stArrowVegaLiteChart"]) {
+            overflow: visible !important;
+        }
+
+        /* V6 stable positioning, including the hover state. */
+        :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+        :is([data-testid="stElementToolbar"], .stElementToolbar),
+        :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+        :is([data-testid="stElementToolbar"], .stElementToolbar):hover {
+            position: absolute !important;
+            top: 8px !important;
+            right: 8px !important;
+            bottom: auto !important;
+            left: auto !important;
+            inset: 8px 8px auto auto !important;
+            margin: 0 !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            pointer-events: auto !important;
+            transform: none !important;
+            translate: none !important;
+            transition: none !important;
+            animation: none !important;
+            z-index: 10 !important;
+        }
+
+        /* V9: tested in DevTools: inset, not top alone, controls placement.
+           Position beside the title; keep identical hover coordinates. */
+        :is(.st-key-chart_a, .st-key-chart_b)
+        :is([data-testid="stElementToolbar"], .stElementToolbar),
+        :is(.st-key-chart_a, .st-key-chart_b)
+        :is([data-testid="stElementToolbar"], .stElementToolbar):hover {
+            top: -42px !important;
+            inset: -42px 0px auto auto !important;
+            background: transparent !important;
+            border: 0 !important;
+            box-shadow: none !important;
+        }
+
+        /* Remove the native white toolbar pill on the grey chart card. */
+        :is(.st-key-chart_a, .st-key-chart_b)
+        [data-testid="stElementToolbarButtonContainer"] {
+            background: transparent !important;
+            border: 0 !important;
+            box-shadow: none !important;
+        }
+
+        /* V10: Overlay has two text rows above the combined plot. Raise its
+           toolbar separately beside the A/B selection summary. Verify the
+           -56px offset visually at the target desktop window width. */
+        .st-key-combined_chart
+        :is([data-testid="stElementToolbar"], .stElementToolbar),
+        .st-key-combined_chart
+        :is([data-testid="stElementToolbar"], .stElementToolbar):hover {
+            top: -42px !important;
+            right: 0 !important;
+            inset: -42px 0px auto auto !important;
+            background: transparent !important;
+            border: 0 !important;
+            box-shadow: none !important;
+        }
+
+        .st-key-combined_chart
+        [data-testid="stElementToolbarButtonContainer"] {
+            background: transparent !important;
+            border: 0 !important;
+            box-shadow: none !important;
+        }
+
+        :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+        :is([data-testid="stElementToolbar"], .stElementToolbar)
+        :is(button, [data-testid="stElementToolbarButton"]) {
+            opacity: 1 !important;
+            visibility: visible !important;
+            pointer-events: auto !important;
+        }
+
+        /* Fullscreen must never retain the negative toolbar offset. */
+        :fullscreen
+        [data-testid="stArrowVegaLiteChart"] {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
+        :fullscreen
+        :is([data-testid="stElementToolbar"], .stElementToolbar),
+        :fullscreen
+        :is([data-testid="stElementToolbar"], .stElementToolbar):hover {
+            background: white !important;
+            top: 8px !important;
+            right: 8px !important;
+            inset: 8px 8px auto auto !important;
+        }
+    }
+    </style>"""
+)
+
+# Indicator buttons live beneath each chart and act as its interactive legend.
+# On narrow screens show two legend items per row, never four vertical blocks.
+st.html(
+    """<style>
+    /* Compact gap below the Explorer toolbar on wide screens only. */
+    @media (min-width: 1061px) {
+        .st-key-lme_explorer_toolbar {
+            margin-bottom: 0 !important;
+            padding-bottom: 0.3rem !important;
+        }
+    }
+    /* One outer card for Controls + Chart. Internal keyed containers keep
+       their existing state and responsive selectors, without extra frames. */
+    .st-key-analysis_a .st-key-controls_a,
+    .st-key-analysis_b .st-key-controls_b {
+        border: 0 !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        border-radius: 0 !important;
+    }
+    .st-key-analysis_a .st-key-chart_a,
+    .st-key-analysis_b .st-key-chart_b {
+        border: 0 !important;
+        border-top: 1px solid var(--lme-border, #e2e5e9) !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        margin-top: 0 !important;
+        padding-top: 0.55rem !important;
+    }
+    [class*="st-key-indicator_legend_"] [class*="st-key-indicator_button_"] button {
+        min-height: 32px !important;
+        padding: 0.2rem 0.15rem !important;
+        white-space: nowrap !important;
+    }
+    [class*="st-key-indicator_legend_"] [class*="st-key-indicator_button_"] button p {
+        white-space: nowrap !important;
+        font-size: 0.86rem !important;
+    }
+    @media (max-width: 768px) {
+        [class*="st-key-indicator_legend_"] [data-testid="stHorizontalBlock"] {
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            gap: 0.1rem 0.5rem !important;
+        }
+        [class*="st-key-indicator_legend_"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+            flex: 0 0 calc(50% - 0.25rem) !important;
+            width: calc(50% - 0.25rem) !important;
+            max-width: calc(50% - 0.25rem) !important;
+            min-width: 0 !important;
+        }
+    }
+    </style>""",
+)
+
+# Qualification level uses a light text-only horizontal selector.
+# Scope the overrides to the qualification widgets so the toolbar and
+# any other segmented controls retain their existing appearance.
+st.html(
+    """<style>
+    div[class*="st-key-qualification_tabs_"] [data-testid="stSegmentedControl"] {
+        max-width: 100%;
+        overflow-x: auto;
+        scrollbar-width: thin;
+    }
+    div[class*="st-key-qualification_tabs_"] [data-testid="stSegmentedControl"]
+    [role="group"] {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        width: max-content !important;
+        max-width: none !important;
+        gap: 0 !important;
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+    div[class*="st-key-qualification_tabs_"]
+    button[data-variant="segmented_control"] {
+        background: transparent !important;
+        color: #667085 !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        white-space: nowrap !important;
+        flex: 0 0 auto !important;
+        font-weight: 500 !important;
+        padding: 0.28rem 0.65rem !important;
+    }
+    div[class*="st-key-qualification_tabs_"]
+    button[data-variant="segmented_control"]:not(:last-child) {
+        border-right: 1px solid #d5d9df !important;
+    }
+    div[class*="st-key-qualification_tabs_"]
+    button[data-variant="segmented_control"][data-selected="true"] {
+        background: transparent !important;
+        color: #171717 !important;
+        font-weight: 700 !important;
+    }
+    div[class*="st-key-qualification_tabs_"]
+    button[data-variant="segmented_control"]:hover {
+        background: #e9ebef !important;
+        color: #171717 !important;
+    }
+    /* On phones, keep the five qualification levels on one line. If a
+       particularly narrow display cannot fit them, allow horizontal scroll
+       instead of wrapping Expert onto a second row. */
+    @media (max-width: 600px) {
+        div[class*="st-key-qualification_tabs_"] [data-testid="stSegmentedControl"] {
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            max-width: 100% !important;
+            -webkit-overflow-scrolling: touch;
+        }
+        div[class*="st-key-qualification_tabs_"] [data-testid="stSegmentedControl"]
+        [role="group"] {
+            flex-wrap: nowrap !important;
+            width: max-content !important;
+            min-width: max-content !important;
+        }
+        div[class*="st-key-qualification_tabs_"]
+        button[data-variant="segmented_control"] {
+            /* Comfortable tap spacing; the row scrolls if it does not fit. */
+            padding: 0.34rem 0.55rem !important;
+            font-size: 0.86rem !important;
+        }
+    }
+    </style>""",
+)
+
 #st.title("Explore the labour market")
 
 if not LABOUR_MARKET_DATA_PATH.exists():
@@ -110,6 +358,37 @@ if missing_columns:
     )
     st.stop()
 
+
+
+# Same indicator configuration as the existing charts. The dots and names
+# appear only below the plots; each legend item is also a toggle button.
+INDICATOR_LEGEND = (
+    ("Vacancies", "🔴"),
+    ("Employed", "🔵"),
+    ("Unemployed", "🟡"),
+    ("Job seekers", "🟢"),
+)
+
+
+def render_indicator_legend(chart_container, chart_number: int, group: str = "") -> None:
+    """Interactive four-item legend below a chart (or A/B legends in Overlay)."""
+    legend = chart_container.container(key=f"indicator_legend_{chart_number}")
+    if group:
+        legend.caption(f"Selection {group}")
+
+    legend_columns = legend.columns(4, gap="small")
+    for column, (label, dot) in zip(legend_columns, INDICATOR_LEGEND):
+        state_key = f"indicator_state_{chart_number}_{label}"
+        is_selected = st.session_state.get(state_key, label != "Job seekers")
+        button_label = f"{dot}  {label}" if is_selected else f"◯  {label}"
+        if column.button(
+            button_label,
+            key=f"indicator_button_{chart_number}_{label}",
+            help=f"{'Hide' if is_selected else 'Show'} {label.lower()}",
+            width="stretch",
+        ):
+            st.session_state[state_key] = not is_selected
+            st.rerun()
 
 
 def render_chart(
@@ -260,13 +539,6 @@ def render_chart(
     # Occupation
     # ---------------------------------------------------------
 
-    controls.markdown(
-        '<p style="font-size: 14px; font-weight: 600; '
-        'margin: 0 0 8px 0;">Occupation</p>',
-        unsafe_allow_html=True,
-    )
-
-
     selected_code = st.session_state[selected_code_key]
 
     if selected_code != GERMANY_CODE:
@@ -283,6 +555,17 @@ def render_chart(
                 st.session_state[selected_code_key] = str(parent_code)
 
             st.rerun()
+
+    # Inline on desktop: Occupation: | Search | Browse.
+    # On narrow screens Streamlit stacks the three columns naturally.
+    occupation_label_col, search_col, browse_col = controls.columns(
+        [1.35, 3.5, 3.5], gap="small", vertical_alignment="center"
+    )
+    occupation_label_col.markdown(
+        '<span style="font-size: 0.86rem; font-weight: 600; '
+        'white-space: nowrap;">Occupation:</span>',
+        unsafe_allow_html=True,
+    )
 
     # ---------------------------------------------------------
     # Global search
@@ -308,12 +591,12 @@ def render_chart(
         f"{chart_number}_{st.session_state[selected_code_key]}"
     )
 
-    searched_code = controls.selectbox(
+    searched_code = search_col.selectbox(
         "Search occupations",
         search_options,
         index=0,
         format_func=lambda code: (
-            "🔎︎ Search all occupations..."
+            "🔎 Search all occupations..."
             if code is None
             else GERMANY_LABEL
             if code == GERMANY_CODE
@@ -369,12 +652,12 @@ def render_chart(
             f"{chart_number}_{selected_code}"
         )
 
-        selected_child = controls.selectbox(
+        selected_child = browse_col.selectbox(
             "Browse by category",
             child_options,
             index=0,
             format_func=lambda code: (
-                "🔎︎ Browse by category"
+                "Browse by category"
                 if code is None
                 else child_names[code]
             ),
@@ -435,30 +718,52 @@ def render_chart(
         ].copy()
 
 
+    # Display names only: filtering keeps the original BA qualification values.
     QUALIFICATION_DISPLAY_LABELS = {
         "Insgesamt": "Overall",
         "Gesamt": "Overall",
-        "Helfer": "Helfer",
-        "Fachkraft": "Fachkraft",
-        "Spezialist": "Spezialist",
-        "Experte": "Experte",
+        "Helfer": "Helpers",
+        "Fachkraft": "Skilled",
+        "Spezialist": "Specialists",
+        "Experte": "Experts",
     }
 
+    # Compact labels are used only in the qualification selector. Keep the
+    # original BA qualification codes and full labels for data and Overlay.
+    QUALIFICATION_TAB_LABELS = {
+        "Insgesamt": "All",
+        "Gesamt": "All",
+        "Helfer": "Helper",
+        "Fachkraft": "Skilled",
+        "Spezialist": "Specialist",
+        "Experte": "Expert",
+    }
+
+    # Use a human-friendly order rather than alphabetical German sorting.
+    qualification_order = (
+        "Insgesamt", "Gesamt", "Helfer", "Fachkraft", "Spezialist", "Experte"
+    )
     qualification_options = sorted(
-        occupation_df["qualification"].dropna().astype(str).unique().tolist()
+        occupation_df["qualification"].dropna().astype(str).unique().tolist(),
+        key=lambda q: (
+            qualification_order.index(q)
+            if q in qualification_order
+            else len(qualification_order),
+            q,
+        ),
     )
 
-
-    # Keep the domain selection separate from Streamlit's widget state.
-    # Widget keys are cleaned up when Chart B is hidden in Single view.
+    # Keep the semantic choice separate from Streamlit's widget state.
+    # Chart B's widget can disappear in Single view, but its choice must persist.
     qualification_state_key = f"selected_qualification_{chart_number}"
-    qualification_widget_key = f"qualification_{chart_number}"
+    # A new key avoids reusing the old selectbox widget's identity.
+    qualification_widget_key = f"qualification_tabs_{chart_number}"
     previous_qualification = st.session_state.get(
         qualification_state_key,
-        st.session_state.get(qualification_widget_key),
+        st.session_state.get(f"qualification_{chart_number}"),
     )
 
-    # The two datasets use different names for the same overall level.
+    # These labels can represent the same 'Overall' level in BA datasets.
     if previous_qualification in ("Insgesamt", "Gesamt"):
         previous_qualification = next(
             (q for q in ("Insgesamt", "Gesamt") if q in qualification_options),
@@ -477,22 +782,43 @@ def render_chart(
     st.session_state[qualification_state_key] = selected_qualification
 
     if qualification_options:
-        # Reconcile before instantiating the widget, including singleton options.
+        # Inline on desktop: Qualification: | Overall | Helpers | ...
+        # The label precedes the selector when columns stack on mobile.
+        qualification_label_col, qualification_choice_col = controls.columns(
+            [1.35, 7.0], gap="small", vertical_alignment="center"
+        )
+        qualification_label_col.markdown(
+            '<span style="font-size: 0.86rem; font-weight: 600; '
+            'white-space: nowrap;">Qualification:</span>',
+            unsafe_allow_html=True,
+        )
+
+        # Reconcile old selections before creating the new segmented widget.
         st.session_state[qualification_widget_key] = selected_qualification
 
         def remember_qualification():
-            st.session_state[qualification_state_key] = st.session_state[
-                qualification_widget_key
-            ]
+            choice = st.session_state.get(qualification_widget_key)
+            if choice in qualification_options:
+                st.session_state[qualification_state_key] = choice
+            else:
+                # Clicking the active tab again must not clear the selection.
+                st.session_state[qualification_widget_key] = st.session_state[
+                    qualification_state_key
+                ]
 
-        selected_qualification = controls.selectbox(
+        selected_qualification = qualification_choice_col.segmented_control(
             "Qualification level",
-            qualification_options,
-            format_func=lambda q: QUALIFICATION_DISPLAY_LABELS.get(q, q),
+            options=qualification_options,
+            selection_mode="single",
+            format_func=lambda q: QUALIFICATION_TAB_LABELS.get(q, q),
             key=qualification_widget_key,
             on_change=remember_qualification,
             disabled=len(qualification_options) == 1,
+            label_visibility="collapsed",
+            width="content",
         )
+        if selected_qualification not in qualification_options:
+            selected_qualification = st.session_state[qualification_state_key]
     else:
         if render_output:
             chart_container.warning("No qualification data is available for this occupation.")
@@ -596,51 +922,25 @@ def render_chart(
         },
     }
 
-    indicator_controls = [
-        ("Vacancies", "Registered vacancies", "🔴"),
-        ("Employed", "Employed people", "🔵"),
-        ("Unemployed", "Unemployed people", "🟡"),
-        ("Job seekers", "Job seekers", "🟢"),
-    ]
-
-    controls.markdown(
-        '<p style="font-size: 14px; font-weight: 600; margin: 0 0 8px 0;">Indicators</p>',
-        unsafe_allow_html=True,
-    )
-
-
-
+    # Indicator state stays independent for A and B even if one chart is hidden.
+    # The controls are now rendered as a legend directly under the chart.
     selected_indicators = []
-
-    for label, indicator, dot in indicator_controls:
+    for label, indicator in (
+        ("Vacancies", "Registered vacancies"),
+        ("Employed", "Employed people"),
+        ("Unemployed", "Unemployed people"),
+        ("Job seekers", "Job seekers"),
+    ):
         state_key = f"indicator_state_{chart_number}_{label}"
-
         if state_key not in st.session_state:
             st.session_state[state_key] = label != "Job seekers"
-
-        is_selected = st.session_state[state_key]
-
-        button_label = (
-            f"{dot}  {label}"
-            if is_selected
-            else f"  ◯   {label}"
-        )
-
-        if controls.button(
-            button_label,
-            key=f"indicator_button_{chart_number}_{label}",
-            width="stretch",
-        ):
-            st.session_state[state_key] = not is_selected
-            st.rerun()
-
-        if is_selected:
+        if st.session_state[state_key]:
             selected_indicators.append(indicator)
-
 
     if not selected_indicators:
         if render_output:
-            chart_container.info("Choose at least one indicator.")
+            chart_container.info("Choose at least one indicator in the legend below.")
+            render_indicator_legend(chart_container, chart_number)
         return {
             "plot_df": pd.DataFrame(columns=["report_date", "indicator", "value"]),
             "display_name": selected_name,
@@ -710,7 +1010,7 @@ def render_chart(
     y_axis_title = (
         "Index (start = 100)"
         if view_mode == "Indexed"
-        else "People / vacancies"
+        else None
     )
 
     display_name = (
@@ -736,20 +1036,14 @@ def render_chart(
             display: flex;
             align-items: baseline;
             gap: 0.7rem;
-            margin-top: 0.6rem;
-            margin-bottom: 0.5rem;
+            margin-top: 0.15rem;
+            margin-bottom: 0.25rem;
         ">
             <span style="
                 font-size: 1.35rem;
                 font-weight: 600;
             ">
                 {display_name}
-            </span>
-            <span style="
-                font-size: 1.35rem;
-                opacity: 0.6;
-            ">
-                · {qualification_label}
             </span>
         </div>
         """,
@@ -787,6 +1081,9 @@ def render_chart(
                 y=alt.Y(
                     "value:Q",
                     title=y_axis_title,
+                    axis=alt.Axis(
+                        format=",.0f" if view_mode == "Indexed" else "~s",
+                    ),
                 ),
                 color=alt.Color(
                     "indicator:N",
@@ -816,7 +1113,7 @@ def render_chart(
                 ],
             )
             .properties(
-                height=460,
+                height=380,
             )
             .interactive()
         )
@@ -825,6 +1122,8 @@ def render_chart(
             chart,
             width="stretch",
         )
+
+    render_indicator_legend(chart_container, chart_number)
 
 
 def render_combined_chart(payload_a, payload_b, chart_container) -> None:
@@ -847,7 +1146,9 @@ def render_combined_chart(payload_a, payload_b, chart_container) -> None:
             frames.append(frame)
 
     if not frames:
-        chart_container.info("Choose at least one indicator in Controls A or Controls B.")
+        chart_container.info("Choose at least one indicator in the legend below.")
+        render_indicator_legend(chart_container, 1, group="A")
+        render_indicator_legend(chart_container, 2, group="B")
         return
 
     plot_df = pd.concat(frames, ignore_index=True)
@@ -862,9 +1163,12 @@ def render_combined_chart(payload_a, payload_b, chart_container) -> None:
             x=alt.X("report_date:T", title=None),
             y=alt.Y(
                 "value:Q",
-                title="Index (start = 100)" if view_mode == "Indexed" else "People / vacancies",
+                title="Index (start = 100)" if view_mode == "Indexed" else None,
+                axis=alt.Axis(
+                    format=",.0f" if view_mode == "Indexed" else "~s",
+                ),
             ),
-            color=alt.Color("indicator:N", scale=color_scale, title="Indicator"),
+            color=alt.Color("indicator:N", scale=color_scale, legend=None),
             strokeDash=alt.StrokeDash(
                 "selection:N",
                 scale=alt.Scale(domain=["A", "B"], range=[[1, 0], [6, 3]]),
@@ -878,52 +1182,42 @@ def render_combined_chart(payload_a, payload_b, chart_container) -> None:
                             format=",.1f" if view_mode == "Indexed" else ",.0f"),
             ],
         )
-        .properties(height=460)
+        .properties(height=380)
         .interactive()
     )
     chart_container.altair_chart(chart, width="stretch")
+    # Overlay shows one plot but still has independently configurable A/B series.
+    render_indicator_legend(chart_container, 1, group="A")
+    render_indicator_legend(chart_container, 2, group="B")
 
 
 # Controls and chart output adapt to the selected workspace layout.
+# Compare and Single: one card per analysis, with a subtle divider between
+# the filters and the chart. Keep the child keys for CSS and widget stability.
+def make_analysis_card(parent, suffix: str):
+    outer = parent.container(border=True, key=f"analysis_{suffix}")
+    controls = outer.container(border=False, key=f"controls_{suffix}")
+    chart = outer.container(border=False, key=f"chart_{suffix}")
+    return controls, chart
+
+
 if layout_mode == "Compare":
-    controls_a_col, chart_a_col, chart_b_col, controls_b_col = st.columns(
-        [1.1, 2.4, 2.4, 1.1], gap="medium"
-    )
-    with controls_a_col:
-        controls_a = st.container(border=True, key="controls_a")
-    with chart_a_col:
-        chart_a = st.container(border=True, key="chart_a")
-    with chart_b_col:
-        chart_b = st.container(border=True, key="chart_b")
-    with controls_b_col:
-        controls_b = st.container(border=True, key="controls_b")
-    controls_a.caption("Controls A")
-    chart_a.caption("Chart A")
-    chart_b.caption("Chart B")
-    controls_b.caption("Controls B")
+    chart_a_col, chart_b_col = st.columns([1, 1], gap="medium")
+    controls_a, chart_a = make_analysis_card(chart_a_col, "a")
+    controls_b, chart_b = make_analysis_card(chart_b_col, "b")
     render_chart(1, controls_a, chart_a)
     render_chart(2, controls_b, chart_b)
 elif layout_mode == "Combined":
-    controls_a_col, chart_col, controls_b_col = st.columns(
-        [1.1, 5.8, 1.1], gap="medium"
-    )
+    # Overlay still uses two independent controls and one shared chart.
+    controls_a_col, controls_b_col = st.columns([1, 1], gap="medium")
     with controls_a_col:
         controls_a = st.container(border=True, key="controls_a")
-    with chart_col:
-        combined_chart = st.container(border=True, key="combined_chart")
     with controls_b_col:
         controls_b = st.container(border=True, key="controls_b")
-    controls_a.caption("Controls A")
-    controls_b.caption("Controls B")
+    combined_chart = st.container(border=True, key="combined_chart")
     payload_a = render_chart(1, controls_a, None, render_output=False)
     payload_b = render_chart(2, controls_b, None, render_output=False)
     render_combined_chart(payload_a, payload_b, combined_chart)
 else:
-    controls_col, chart_col = st.columns([1.1, 6.9], gap="medium")
-    with controls_col:
-        controls_a = st.container(border=True, key="controls_a")
-    with chart_col:
-        chart_a = st.container(border=True, key="chart_a")
-    controls_a.caption("Controls A")
-    chart_a.caption("Chart A")
+    controls_a, chart_a = make_analysis_card(st, "a")
     render_chart(1, controls_a, chart_a)

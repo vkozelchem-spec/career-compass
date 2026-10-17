@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import streamlit as st
-from lme_brand import lme_compass_button_style
+from lme_brand import lme_compass_button_style, lme_home_button_style
 
 
 ASSETS_DIR = Path(__file__).parent / "assets"
@@ -368,14 +368,10 @@ def apply_app_style() -> None:
 
         }
 
-        /* Stack the two chart groups on phones while keeping each control
-           panel directly above the chart it controls. */
-        @media
-            (max-width: 768px),
-            (pointer: coarse) and (max-width: 1600px),
-            (any-pointer: coarse) and (max-width: 1600px),
-            (orientation: landscape) and (pointer: coarse),
-            (orientation: landscape) and (max-height: 700px) {
+        /* Stack paired chart panels only when the viewport is genuinely narrow.
+           Do not use height, landscape orientation or touch capability here:
+           those conditions can mistakenly stack charts on 15-inch laptops. */
+        @media (max-width: 1050px) {
             div[data-testid="stHorizontalBlock"]:has(.st-key-chart_b) {
                 flex-direction: column !important;
                 gap: 0.75rem !important;
@@ -673,13 +669,9 @@ def apply_app_style() -> None:
     )
 
 
-def render_header(show_layout_control: bool = False):
-    """Render the shared Labour Market Explorer header."""
-
-    header_logo, header_nav = st.columns(
-        [1, 4],
-        vertical_alignment="center",
-    )
+def _render_information_header():
+    """Retain the current informational-page navigation until About is redesigned."""
+    header_logo, header_nav = st.columns([1, 4], vertical_alignment="center")
 
     with header_logo:
         st.markdown(lme_compass_button_style(), unsafe_allow_html=True)
@@ -688,106 +680,329 @@ def render_header(show_layout_control: bool = False):
             st.switch_page("app.py")
 
     with header_nav:
-        if show_layout_control:
-            (
-                nav_spacer,
-                nav_view,
-                nav_layout,
-                nav_section_switch,
-                nav_about,
-            ) = st.columns(
-                [1.8, 1.3, 2.0, 2.2, 0.9],
-                vertical_alignment="center",
-            )
-        else:
-            nav_spacer, nav_section_switch, nav_about = st.columns(
-                [5, 2.2, 1],
-                vertical_alignment="center",
-            )
+        _, nav_section_switch, nav_about = st.columns(
+            [5, 2.2, 1], vertical_alignment="center"
+        )
 
-    # ---------------------------------------------------------
-    # Global data view: Absolute / Indexed
-    # ---------------------------------------------------------
+    with nav_section_switch:
+        if st.button("Dashboard", key="nav_section_switch", width="stretch"):
+            st.switch_page("app.py")
 
-    if show_layout_control:
-        if "global_view_mode" not in st.session_state:
-            st.session_state.global_view_mode = "Absolute"
+    # Historical informational-page button is retained here only; it is not
+    # displayed on the Explorer workspace.
+    with nav_about:
+        st.button("About", key="nav_about", width="stretch")
 
-        with nav_view:
-            view_label = (
-                "Indexed view"
-                if st.session_state.global_view_mode == "Absolute"
-                else "Absolute view"
-            )
+    return None, None
 
+
+def _explorer_header_style() -> str:
+    """Compact, scoped Explorer toolbar: Home + languages / view + layout.
+
+    Global values are intentionally unchanged: the charts still expect
+    global_view_mode = Absolute|Indexed and chart_layout = Single|Compare|Combined.
+    """
+    return """
+    <style>
+      /* Explorer only: reduce space above the toolbar on laptop/desktop.
+         Welcome and narrow mobile layouts keep their existing spacing. */
+      @media (min-width: 1051px) {
+          .stMainBlockContainer:has(.st-key-lme_explorer_toolbar) {
+              padding-top: 0.45rem !important;
+          }
+      }
+      .st-key-lme_explorer_toolbar {
+          padding-bottom: 0.65rem;
+          margin-bottom: 0.7rem;
+      }
+      .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] {
+          align-items: center !important;
+      }
+      .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
+          min-width: 0 !important;
+      }
+      .st-key-lme_explorer_toolbar button {
+          white-space: nowrap;
+      }
+
+      /* Languages sit next to Home. Only English is available for now. */
+      .st-key-lme_explorer_toolbar .lme-language-strip {
+          display: flex;
+          align-items: center;
+          justify-content: flex-start;
+          gap: 0.35rem;
+          min-height: 40px;
+          white-space: nowrap;
+          font-size: 0.88rem;
+          line-height: 1.2;
+      }
+      .st-key-lme_explorer_toolbar .lme-language-active {
+          font-weight: 700;
+          color: var(--lme-text);
+      }
+      .st-key-lme_explorer_toolbar .lme-language-planned {
+          color: var(--lme-text-secondary);
+          opacity: 0.72;
+      }
+      .st-key-lme_explorer_toolbar .lme-language-divider {
+          color: #c1c6cd;
+          font-weight: 400;
+      }
+
+      /* Two robust icon-only native buttons for data view. The SVG sits on
+         the button itself, so it is independent of Streamlit's text DOM. */
+      .st-key-lme_explorer_toolbar .st-key-lme_view_absolute button,
+      .st-key-lme_explorer_toolbar .st-key-lme_view_indexed button {
+          height: 38px !important;
+          min-height: 38px !important;
+          min-width: 42px !important;
+          padding: 0 !important;
+          border: 0 !important;
+          border-radius: 7px !important;
+          box-shadow: none !important;
+          background-color: transparent !important;
+          background-repeat: no-repeat !important;
+          background-position: center !important;
+          background-size: 21px 21px !important;
+          /* Keep the button's accessible text while removing it visually. */
+          font-size: 0 !important;
+          line-height: 0 !important;
+      }
+      .st-key-lme_explorer_toolbar .st-key-lme_view_absolute button *,
+      .st-key-lme_explorer_toolbar .st-key-lme_view_indexed button * {
+          font-size: 0 !important;
+          line-height: 0 !important;
+      }
+      .st-key-lme_explorer_toolbar .st-key-lme_view_absolute button {
+          background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMxNzE3MTciIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNNiAyMHYtN00xMiAyMFY1TTE4IDIwdi0xMSIvPjwvc3ZnPg==") !important;
+      }
+      .st-key-lme_explorer_toolbar .st-key-lme_view_indexed button {
+          background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMxNzE3MTciIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48bGluZSB4MT0iMTkiIHkxPSI1IiB4Mj0iNSIgeTI9IjE5Ii8+PGNpcmNsZSBjeD0iNi41IiBjeT0iNi41IiByPSIyLjI1Ii8+PGNpcmNsZSBjeD0iMTcuNSIgY3k9IjE3LjUiIHI9IjIuMjUiLz48L3N2Zz4=") !important;
+      }
+      .st-key-lme_explorer_toolbar .st-key-lme_view_absolute button:hover,
+      .st-key-lme_explorer_toolbar .st-key-lme_view_indexed button:hover {
+          background-color: #f0f1f3 !important;
+      }
+      .st-key-lme_explorer_toolbar .st-key-lme_view_buttons div[data-testid="stHorizontalBlock"] {
+          align-items: center !important;
+          gap: 0.15rem !important;
+      }
+      /* Chart layout keeps its existing textual segmented control. */
+      .st-key-lme_explorer_toolbar .st-key-chart_layout button[data-variant="segmented_control"] {
+          border: 0 !important;
+          box-shadow: none !important;
+          background: transparent !important;
+          color: var(--lme-text-secondary) !important;
+          border-radius: 7px !important;
+          transition: background-color 120ms ease, color 120ms ease;
+      }
+      .st-key-lme_explorer_toolbar .st-key-chart_layout button[data-selected="true"] {
+          background: #e9ebef !important;
+          color: var(--lme-text) !important;
+      }
+      .st-key-lme_explorer_toolbar .st-key-chart_layout button:hover {
+          background: #f0f1f3 !important;
+      }
+      .st-key-lme_explorer_toolbar .st-key-chart_layout div[role="group"] {
+          gap: 0 !important;
+          border: 0 !important;
+          box-shadow: none !important;
+          background: transparent !important;
+      }
+
+      /* One | Two | Overlay — textual alternatives, no chart icon.
+         A small divider separates this group from the icon-only view control. */
+      .st-key-lme_explorer_toolbar .lme-toolbar-divider {
+          display: block;
+          width: 1px;
+          height: 23px;
+          background: var(--lme-border-strong);
+          margin: 0 auto;
+      }
+      .st-key-lme_explorer_toolbar .st-key-chart_layout button[data-variant="segmented_control"] {
+          min-height: 38px !important;
+          font-size: 0.87rem !important;
+          padding: 0.34rem 0.55rem !important;
+          font-weight: 500 !important;
+          position: relative;
+      }
+      .st-key-lme_explorer_toolbar .st-key-chart_layout button[data-variant="segmented_control"][data-selected="true"] {
+          font-weight: 700 !important;
+      }
+      .st-key-lme_explorer_toolbar .st-key-chart_layout button[data-variant="segmented_control"]:not(:last-of-type)::after {
+          content: "|";
+          position: absolute;
+          right: -2px;
+          color: #c1c6cd;
+          font-weight: 400;
+      }
+
+      /* Narrow viewports: navigation/language on row 1, analysis controls on row 2. */
+      @media (max-width: 1050px) {
+          .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] {
+              display: grid !important;
+              grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+              gap: 0.45rem !important;
+              align-items: center !important;
+          }
+          .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
+              min-width: 0 !important;
+              width: 100% !important;
+              max-width: none !important;
+          }
+          /* 1 Home; 2 languages; 3 desktop spacer; 4 view; 5 divider; 6 layout. */
+          .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(1) {
+              grid-column: span 2;
+          }
+          .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(2) {
+              grid-column: span 10;
+          }
+          .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(3),
+          .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(5) {
+              display: none !important;
+          }
+          .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(4) {
+              grid-column: span 4;
+          }
+          .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(6) {
+              grid-column: span 8;
+          }
+          .st-key-lme_explorer_toolbar .lme-language-strip {
+              font-size: 0.84rem;
+              gap: 0.3rem;
+          }
+          .st-key-lme_explorer_toolbar .st-key-chart_layout button[data-variant="segmented_control"] {
+              font-size: 0.83rem !important;
+              padding: 0.32rem 0.42rem !important;
+          }
+          /* Do not turn the two icon buttons into a twelve-column grid. */
+          .st-key-lme_explorer_toolbar .st-key-lme_view_buttons div[data-testid="stHorizontalBlock"] {
+              display: flex !important;
+              gap: 0.2rem !important;
+          }
+          .st-key-lme_explorer_toolbar .st-key-lme_view_buttons div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
+              flex: 1 1 0 !important;
+              width: 50% !important;
+              min-width: 0 !important;
+              max-width: 50% !important;
+          }
+          .st-key-lme_explorer_toolbar {
+              padding-bottom: 0.5rem;
+              margin-bottom: 0.55rem;
+          }
+      }
+    </style>
+    """
+
+
+def _render_explorer_header():
+    """Two logical groups: navigation/language left; data modes/layout right."""
+    st.markdown(_explorer_header_style(), unsafe_allow_html=True)
+    st.markdown(lme_home_button_style(), unsafe_allow_html=True)
+
+    # Preserve values consumed by the existing charts. Don't rename these keys.
+    if st.session_state.get("global_view_mode") not in ("Absolute", "Indexed"):
+        st.session_state.global_view_mode = "Absolute"
+    if st.session_state.get("chart_layout") not in ("Single", "Compare", "Combined"):
+        st.session_state.chart_layout = "Compare"
+
+    layout_labels = {
+        "Single": "One",
+        "Compare": "Two",
+        "Combined": "Overlay",
+    }
+
+    # Current data view is indicated by a quiet gray background.
+    selected_view_button = (
+        "lme_view_absolute"
+        if st.session_state.global_view_mode == "Absolute"
+        else "lme_view_indexed"
+    )
+    st.markdown(
+        f'<style>.st-key-lme_explorer_toolbar .st-key-{selected_view_button} '
+        'button { background-color: #e9ebef !important; }</style>',
+        unsafe_allow_html=True,
+    )
+
+    with st.container(key="lme_explorer_toolbar"):
+        home_col, language_col, spacer_col, view_col, divider_col, layout_col = st.columns(
+            [0.55, 1.30, 7.25, 1.20, 0.18, 2.45],
+            gap="small",
+            vertical_alignment="center",
+        )
+
+        with home_col:
             if st.button(
-                view_label,
-                key="nav_view",
-                width="stretch",
+                "Home",
+                key="lme_explorer_home",
+                type="tertiary",
+                help="Back to Welcome",
+                width="content",
             ):
-                st.session_state.global_view_mode = (
-                    "Indexed"
-                    if st.session_state.global_view_mode == "Absolute"
-                    else "Absolute"
-                )
-                st.rerun()
+                st.session_state["lme_screen"] = "welcome"
+                st.switch_page("app.py")
 
-        view_mode = st.session_state.global_view_mode
+        with language_col:
+            st.markdown(
+                """<div class="lme-language-strip" role="group"
+                     aria-label="Languages: English available; German and Ukrainian planned">
+                     <span class="lme-language-active" aria-current="true"
+                           title="English — current language">En</span>
+                     <span class="lme-language-divider" aria-hidden="true">|</span>
+                     <span class="lme-language-planned" title="Deutsch — coming later">De</span>
+                     <span class="lme-language-divider" aria-hidden="true">|</span>
+                     <span class="lme-language-planned" title="Українська — coming later">Ua</span>
+                   </div>""",
+                unsafe_allow_html=True,
+            )
 
-    else:
-        view_mode = None
+        with view_col:
+            # Use separate stable button keys rather than injecting icons into
+            # Streamlit's internal segmented-control markup.
+            with st.container(key="lme_view_buttons"):
+                absolute_col, indexed_col = st.columns(2, gap="small")
+                with absolute_col:
+                    if st.button(
+                        "Absolute values",
+                        key="lme_view_absolute",
+                        help="Absolute values",
+                        type="tertiary",
+                        width="stretch",
+                    ):
+                        st.session_state.global_view_mode = "Absolute"
+                        st.rerun()
+                with indexed_col:
+                    if st.button(
+                        "Indexed (start = 100)",
+                        key="lme_view_indexed",
+                        help="Indexed (start = 100), not percentages",
+                        type="tertiary",
+                        width="stretch",
+                    ):
+                        st.session_state.global_view_mode = "Indexed"
+                        st.rerun()
 
-    # ---------------------------------------------------------
-    # Chart layout: Single / Compare / Combined
-    # ---------------------------------------------------------
+        with divider_col:
+            st.markdown(
+                '<span class="lme-toolbar-divider" aria-hidden="true"></span>',
+                unsafe_allow_html=True,
+            )
 
-    if show_layout_control:
-        if st.session_state.get("chart_layout") not in (
-            "Single", "Compare", "Combined"
-        ):
-            st.session_state.chart_layout = "Compare"
-
-        layout_labels = {
-            "Single": "One chart",
-            "Compare": "Two charts",
-            "Combined": "Merged chart",
-        }
-        with nav_layout:
-            st.selectbox(
+        with layout_col:
+            st.segmented_control(
                 "Chart layout",
                 options=list(layout_labels),
                 format_func=lambda mode: layout_labels[mode],
                 key="chart_layout",
                 label_visibility="collapsed",
+                width="stretch",
             )
 
-        layout_mode = st.session_state.chart_layout
-    else:
-        layout_mode = None
+    return st.session_state.chart_layout, st.session_state.global_view_mode
 
-    # ---------------------------------------------------------
-    # Dashboard / Data Sources toggle
-    # ---------------------------------------------------------
 
-    with nav_section_switch:
-        section_label = "Data Sources" if show_layout_control else "Dashboard"
-        if st.button(
-            section_label,
-            key="nav_section_switch",
-            width="stretch",
-        ):
-            target_page = (
-                "pages/data_sources.py"
-                if show_layout_control
-                else "app.py"
-            )
-            st.switch_page(target_page)
-
-    with nav_about:
-        st.button(
-            "About",
-            key="nav_about",
-            width="stretch"
-        )
-
-    return layout_mode, view_mode
+def render_header(show_layout_control: bool = False):
+    """Return chart layout and view mode; retain historical info-page support."""
+    if show_layout_control:
+        return _render_explorer_header()
+    return _render_information_header()

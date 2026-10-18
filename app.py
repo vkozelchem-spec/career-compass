@@ -327,6 +327,232 @@ st.html(
     </style>""",
 )
 
+# V11a visual theme experiment. Local preview only; V10 chart toolbar rules,
+# chart data and widget behavior are deliberately left unchanged.
+# To revert: remove this single st.html block.
+st.html(
+    """<style>
+    :root {
+        /* A subtle blue-gray tint, sampled from the panel border color. */
+        --lme-preview-page-tint: rgba(89, 107, 128, 0.12);
+        --lme-preview-card: #394758;
+        --lme-preview-card-border: #596b80;
+        --lme-preview-input: #2d3b4c;
+        --lme-preview-input-border: #586c82;
+        --lme-preview-tab: #485a70;
+        --lme-preview-tab-active: #6c8099;
+        --lme-preview-chart: #f4f6f8;
+        --lme-preview-foreground: #f5f8fc;
+        --lme-preview-shadow: 0 10px 26px rgba(20, 30, 45, 0.17),
+                              0 2px 6px rgba(20, 30, 45, 0.09);
+    }
+
+    /* Explorer page only: slightly darker, cooler outer canvas.
+       The original #f3f4f6 remains unchanged on Welcome and About. */
+    .stApp:has(.st-key-lme_explorer_toolbar) {
+        background: linear-gradient(
+            var(--lme-preview-page-tint),
+            var(--lme-preview-page-tint)
+        ), #f3f4f6 !important;
+    }
+
+    /* Outer One/Two cards and the three bordered Overlay panels.
+       Covers both the keyed content and Streamlit's surrounding border wrapper. */
+    :is(.st-key-analysis_a, .st-key-analysis_b, .st-key-combined_chart,
+        .st-key-controls_a, .st-key-controls_b) {
+        background-color: var(--lme-preview-card) !important;
+        color: var(--lme-preview-foreground) !important;
+    }
+    /* Attach the shadow to the actual keyed cards, rather than depending
+       on which side of the card Streamlit puts its border wrapper. */
+    :is(.st-key-analysis_a, .st-key-analysis_b, .st-key-combined_chart,
+        .st-key-controls_a, .st-key-controls_b) {
+        border-radius: 14px !important;
+        box-shadow: var(--lme-preview-shadow) !important;
+    }
+    /* One/Two contains a controls child: it must not cast a second shadow. */
+    .st-key-analysis_a .st-key-controls_a,
+    .st-key-analysis_b .st-key-controls_b {
+        box-shadow: none !important;
+    }
+    /* Keep a distinct border where Streamlit draws one. */
+    .stMainBlockContainer:has(.st-key-lme_explorer_toolbar)
+    [data-testid="stVerticalBlockBorderWrapper"]:has(
+        :is(.st-key-analysis_a, .st-key-analysis_b,
+            .st-key-combined_chart, .st-key-controls_a, .st-key-controls_b)
+    ) {
+        background-color: var(--lme-preview-card) !important;
+        border-color: var(--lme-preview-card-border) !important;
+    }
+
+    /* In One/Two the controls are part of the outer card, not extra cards. */
+    .st-key-analysis_a .st-key-controls_a,
+    .st-key-analysis_b .st-key-controls_b {
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
+    }
+    .st-key-analysis_a .st-key-chart_a,
+    .st-key-analysis_b .st-key-chart_b {
+        background: transparent !important;
+        border-top-color: #718096 !important;
+    }
+
+    /* Titles, filter labels, Overlay headings and interactive legends. */
+    :is(.st-key-controls_a, .st-key-controls_b,
+        .st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+    :is(p, span, label) {
+        color: var(--lme-preview-foreground) !important;
+    }
+    :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+    [class*="st-key-indicator_button_"] button,
+    :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+    [class*="st-key-indicator_button_"] button :is(p, span) {
+        color: var(--lme-preview-foreground) !important;
+    }
+
+    /* Search and Browse: darker, recessed fields. Cover nested selectbox
+       nodes as Streamlit may paint the visible input on an inner element. */
+    :is(.st-key-controls_a, .st-key-controls_b)
+    [data-testid="stSelectbox"] :is(
+        [data-baseweb="select"],
+        [data-baseweb="select"] > div,
+        [data-baseweb="select"] > div > div,
+        [role="combobox"]
+    ) {
+        background-color: var(--lme-preview-input) !important;
+    }
+    :is(.st-key-controls_a, .st-key-controls_b)
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+        border: 1px solid var(--lme-preview-input-border) !important;
+        border-radius: 9px !important;
+    }
+    :is(.st-key-controls_a, .st-key-controls_b)
+    [data-testid="stSelectbox"] :is(input, span, svg, [role="combobox"]) {
+        color: var(--lme-preview-foreground) !important;
+    }
+    :is(.st-key-controls_a, .st-key-controls_b)
+    [data-testid="stSelectbox"] input::placeholder {
+        color: #e4eaf2 !important;
+        opacity: 1 !important;
+    }
+
+    /* V11a.4: keep the proven V11a.2 dark input rule above.  In the
+       installed Streamlit/BaseWeb build, the arrow section is painted by
+       deeper descendants; paint them the SAME dark color, not transparent.
+       This affects only the two Explorer occupation Selectboxes. */
+    :is(.st-key-controls_a, .st-key-controls_b)
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div,
+    :is(.st-key-controls_a, .st-key-controls_b)
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div * {
+        background-color: var(--lme-preview-input) !important;
+    }
+    :is(.st-key-controls_a, .st-key-controls_b)
+    [data-testid="stSelectbox"] [data-baseweb="select"] :is(input, span, svg) {
+        color: var(--lme-preview-foreground) !important;
+        caret-color: var(--lme-preview-foreground) !important;
+    }
+
+    /* Quiet visible keyboard focus, overriding the Streamlit red ring. */
+    :is(.st-key-controls_a, .st-key-controls_b)
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within,
+    :is(.st-key-controls_a, .st-key-controls_b)
+    [data-testid="stSelectbox"] [data-baseweb="select"]:focus-within {
+        outline: 0 !important;
+        border-color: #a6b8ce !important;
+        box-shadow: 0 0 0 2px #a6b8ce !important;
+    }
+
+    /* The dropdown is rendered in a body-level portal by BaseWeb, outside
+       .st-key-controls_*.  These rules activate only on Explorer pages. */
+    body:has(.st-key-lme_explorer_toolbar)
+    :is([data-baseweb="popover"], [data-baseweb="menu"], [role="listbox"]) {
+        background-color: var(--lme-preview-input) !important;
+        color: var(--lme-preview-foreground) !important;
+        border-color: var(--lme-preview-input-border) !important;
+    }
+    body:has(.st-key-lme_explorer_toolbar)
+    :is([data-baseweb="popover"], [data-baseweb="menu"], [role="listbox"])
+    :is(div, ul, li, [role="option"], p, span) {
+        background-color: var(--lme-preview-input) !important;
+        color: var(--lme-preview-foreground) !important;
+    }
+    body:has(.st-key-lme_explorer_toolbar)
+    :is([data-baseweb="popover"], [data-baseweb="menu"], [role="listbox"])
+    :is([role="option"], li, [data-baseweb="option"]):is(
+        :hover, [aria-selected="true"], [data-highlighted="true"]
+    ),
+    body:has(.st-key-lme_explorer_toolbar)
+    :is([data-baseweb="popover"], [data-baseweb="menu"], [role="listbox"])
+    :is([role="option"], li, [data-baseweb="option"]):is(
+        :hover, [aria-selected="true"], [data-highlighted="true"]
+    ) :is(div, p, span) {
+        background-color: #53677f !important;
+        color: #ffffff !important;
+    }
+    body:has(.st-key-lme_explorer_toolbar)
+    :is([data-baseweb="popover"], [data-baseweb="menu"], [role="listbox"])
+    input {
+        background: #394b60 !important;
+        color: var(--lme-preview-foreground) !important;
+        caret-color: #fff !important;
+    }
+    body:has(.st-key-lme_explorer_toolbar)
+    :is([data-baseweb="popover"], [data-baseweb="menu"], [role="listbox"])
+    input::placeholder {
+        color: #dbe4ee !important;
+        opacity: 1 !important;
+    }
+
+    /* Qualification tabs are brighter than the input fields. */
+    :is(.st-key-controls_a, .st-key-controls_b)
+    div[class*="st-key-qualification_tabs_"]
+    button[data-variant="segmented_control"] {
+        background: var(--lme-preview-tab) !important;
+        color: var(--lme-preview-foreground) !important;
+        border-right-color: #7b8aa0 !important;
+    }
+    :is(.st-key-controls_a, .st-key-controls_b)
+    div[class*="st-key-qualification_tabs_"]
+    button[data-variant="segmented_control"][data-selected="true"] {
+        background: var(--lme-preview-tab-active) !important;
+        color: #fff !important;
+    }
+    :is(.st-key-controls_a, .st-key-controls_b)
+    div[class*="st-key-qualification_tabs_"]
+    button[data-variant="segmented_control"]:hover {
+        background: #657991 !important;
+        color: #fff !important;
+    }
+
+    /* Plot stays light, including the actual Vega drawing surface.
+       The Vega axis labels retain their existing dark chart theme. */
+    :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+    [data-testid="stVegaLiteChart"],
+    :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+    [data-testid="stVegaLiteChart"] .vega-embed,
+    :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+    [data-testid="stVegaLiteChart"] .vega-embed :is(canvas, svg) {
+        background-color: var(--lme-preview-chart) !important;
+    }
+
+    /* Only recolor native chart tools for the dark surrounding card.
+       Position, visibility, hover behavior and fullscreen offsets are V10. */
+    :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+    :is([data-testid="stElementToolbar"], .stElementToolbar) button,
+    :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+    :is([data-testid="stElementToolbar"], .stElementToolbar) button svg {
+        color: #f2f5fa !important;
+    }
+    :fullscreen :is([data-testid="stElementToolbar"], .stElementToolbar)
+    button,
+    :fullscreen :is([data-testid="stElementToolbar"], .stElementToolbar)
+    button svg {
+        color: #243245 !important;
+    }
+    </style>"""
+)
+
 #st.title("Explore the labour market")
 
 if not LABOUR_MARKET_DATA_PATH.exists():
@@ -424,7 +650,7 @@ def render_chart(
     )
 
     GERMANY_CODE = "DE"
-    GERMANY_LABEL = "Germany — All occupations"
+    GERMANY_LABEL = "All occupations"
 
 
     # ---------------------------------------------------------
@@ -596,7 +822,7 @@ def render_chart(
         search_options,
         index=0,
         format_func=lambda code: (
-            "🔎 Search all occupations..."
+            "🔎 All occupations"
             if code is None
             else GERMANY_LABEL
             if code == GERMANY_CODE
@@ -1014,7 +1240,7 @@ def render_chart(
     )
 
     display_name = (
-        "Germany — All occupations"
+        "All occupations"
         if selected_occupation_level == 0
         else selected_name
     )

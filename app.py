@@ -1,4 +1,5 @@
 from pathlib import Path
+import html
 from ui import apply_app_style, render_header
 from lme_welcome import render_welcome
 
@@ -78,6 +79,65 @@ if st.session_state.lme_screen == "welcome":
 
 # Main Explorer
 layout_mode, view_mode = render_header(show_layout_control=True)
+
+# V12.2: detect only the screen class with a tiny, invisible v2 component.
+# Keep numeric Altair heights: Vega-Lite's `height="container"` caused
+# zero-height plots in the earlier experiment. This does not affect styling.
+# The component is mounted only in Explorer, and resize/orientation changes
+# are reported to Python (avoiding forced reloads and URL query parameters).
+_LME_VIEWPORT_JS = """
+export default function({ data, setStateValue }) {
+    let lastMode = data?.previousMode ?? "desktop";
+    let debounceId;
+
+    const reportViewport = () => {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        // Both phone orientations qualify, but a desktop/laptop does not.
+        // These are CSS pixels; DevTools mobile emulation uses them too.
+        const phoneSized = Math.min(width, height) <= 600
+            && Math.max(width, height) <= 1000;
+        const mode = !phoneSized ? "desktop"
+            : (width > height ? "landscape" : "portrait");
+        if (mode !== lastMode) {
+            lastMode = mode;
+            setStateValue("mode", mode);
+        }
+    };
+
+    const onResize = () => {
+        window.clearTimeout(debounceId);
+        debounceId = window.setTimeout(reportViewport, 180);
+    };
+
+    reportViewport();
+    window.addEventListener("resize", onResize);
+    return () => {
+        window.removeEventListener("resize", onResize);
+        window.clearTimeout(debounceId);
+    };
+}
+"""
+
+_lme_viewport_component = st.components.v2.component(
+    "lme_explorer_viewport_v12_2", js=_LME_VIEWPORT_JS
+)
+_lme_viewport_result = _lme_viewport_component(
+    key="lme_explorer_viewport_v12_2",
+    data={"previousMode": st.session_state.get("lme_last_viewport_mode", "desktop")},
+    default={"mode": "desktop"},
+    on_mode_change=lambda: None,
+    height=0,
+)
+_lme_viewport_mode = _lme_viewport_result.mode
+if _lme_viewport_mode not in ("portrait", "landscape", "desktop"):
+    _lme_viewport_mode = "desktop"
+st.session_state["lme_last_viewport_mode"] = _lme_viewport_mode
+CHART_HEIGHT = {"portrait": 260, "landscape": 200, "desktop": 380}[_lme_viewport_mode]
+# V12.6: on phone-sized screens, keep charts readable and tooltip-enabled
+# without Altair's pan/zoom selection capturing swipe and pinch gestures.
+# Desktop charts retain their existing pan/zoom behavior.
+ENABLE_CHART_PAN_ZOOM = _lme_viewport_mode == "desktop"
 
 # Explorer only: V9 placement for Streamlit's NATIVE Altair toolbar.
 # Keep the V6 chart spacing and stable hover behaviour; move only the toolbar
@@ -354,6 +414,16 @@ st.html(
             var(--lme-preview-page-tint),
             var(--lme-preview-page-tint)
         ), #f3f4f6 !important;
+    }
+
+    /* V12.5 mobile spacing experiment: reduce only the Explorer page's
+       left/right margins from the ui.py default 1rem (16px) to 8px.
+       Keep the internal card padding, borders, shadows, charts and toolbar. */
+    @media (max-width: 900px) {
+        .stMainBlockContainer:has(.st-key-lme_explorer_toolbar) {
+            padding-left: 8px !important;
+            padding-right: 8px !important;
+        }
     }
 
     /* Outer One/Two cards and the three bordered Overlay panels.
@@ -1256,6 +1326,16 @@ def render_chart(
     if not render_output:
         return chart_payload
 
+    # V12.4: keep desktop titles unchanged; mobile titles stay on one line.
+    # Reserve room for the native chart toolbar, which sits at the upper right.
+    # Truncation affects presentation only: the full occupation name is kept.
+    mobile_title = _lme_viewport_mode in ("portrait", "landscape")
+    title_font_size = "17px" if mobile_title else "1.35rem"
+    title_max_width = "calc(100% - 108px)" if mobile_title else "100%"
+    title_white_space = "nowrap" if mobile_title else "normal"
+    title_overflow = "hidden" if mobile_title else "visible"
+    title_ellipsis = "ellipsis" if mobile_title else "clip"
+    safe_display_name = html.escape(str(display_name), quote=True)
     chart_card.markdown(
         f"""
         <div style="
@@ -1264,13 +1344,19 @@ def render_chart(
             gap: 0.7rem;
             margin-top: 0.15rem;
             margin-bottom: 0.25rem;
+            min-width: 0;
         ">
-            <span style="
-                font-size: 1.35rem;
+            <span title="{safe_display_name}" style="
+                display: block;
+                font-size: {title_font_size};
                 font-weight: 600;
-            ">
-                {display_name}
-            </span>
+                line-height: 1.3;
+                max-width: {title_max_width};
+                white-space: {title_white_space};
+                overflow: {title_overflow};
+                text-overflow: {title_ellipsis};
+                min-width: 0;
+            ">{safe_display_name}</span>
         </div>
         """,
         unsafe_allow_html=True,
@@ -1339,10 +1425,11 @@ def render_chart(
                 ],
             )
             .properties(
-                height=380,
+                height=CHART_HEIGHT,
             )
-            .interactive()
         )
+        if ENABLE_CHART_PAN_ZOOM:
+            chart = chart.interactive()
 
         chart_card.altair_chart(
             chart,
@@ -1408,9 +1495,10 @@ def render_combined_chart(payload_a, payload_b, chart_container) -> None:
                             format=",.1f" if view_mode == "Indexed" else ",.0f"),
             ],
         )
-        .properties(height=380)
-        .interactive()
+        .properties(height=CHART_HEIGHT)
     )
+    if ENABLE_CHART_PAN_ZOOM:
+        chart = chart.interactive()
     chart_container.altair_chart(chart, width="stretch")
     # Overlay shows one plot but still has independently configurable A/B series.
     render_indicator_legend(chart_container, 1, group="A")

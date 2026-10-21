@@ -262,6 +262,68 @@ st.html(
     </style>"""
 )
 
+# V12.7 (mobile only): keep Streamlit's native Fullscreen chart action visible.
+# Scope to chart cards and leave the established desktop toolbar CSS untouched.
+# The button's aria-label="Fullscreen" was verified in browser DevTools.
+# :has() selects the button wrapper without relying on Streamlit's button order.
+if _lme_viewport_mode in ("portrait", "landscape"):
+    st.html(
+        """<style>
+        /* Keep the one remaining action in the title row, ABOVE the chart.
+           The native toolbar otherwise sits partly behind the Vega plot. */
+        :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+        :is([data-testid="stFullScreenFrame"], [data-testid="stArrowVegaLiteChart"]) {
+            overflow: visible !important;
+        }
+
+        :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+        :is([data-testid="stElementToolbar"], .stElementToolbar) {
+            position: absolute !important;
+            inset: -34px 0 auto auto !important;
+            margin: 0 !important;
+            z-index: 30 !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            pointer-events: auto !important;
+            transform: none !important;
+            transition: none !important;
+        }
+
+        /* A single icon, rather than a large white Streamlit toolbar pill. */
+        :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+        [data-testid="stElementToolbarButtonContainer"] {
+            background: transparent !important;
+            box-shadow: none !important;
+            border: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* In fullscreen, restore the toolbar to its normal screen corner. */
+        :fullscreen :is([data-testid="stElementToolbar"], .stElementToolbar) {
+            inset: 8px 8px auto auto !important;
+            z-index: 50 !important;
+        }
+        :fullscreen [data-testid="stElementToolbarButtonContainer"] {
+            background: white !important;
+        }
+
+        :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+        [data-testid="stElementToolbarButtonContainer"]
+        > [data-testid="stElementToolbarButton"] {
+            display: none !important;
+        }
+
+        :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+        [data-testid="stElementToolbarButtonContainer"]
+        > [data-testid="stElementToolbarButton"]:has(button[aria-label*="fullscreen" i]) {
+            display: flex !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            pointer-events: auto !important;
+        }
+        </style>"""
+    )
+
 # Indicator buttons live beneath each chart and act as its interactive legend.
 # On narrow screens show two legend items per row, never four vertical blocks.
 st.html(
@@ -1739,12 +1801,25 @@ def render_chart(
     render_indicator_legend(chart_container, chart_number)
 
 
+# Mobile-only visual trial: reduce the inside padding of the Overlay chart
+# card to match the Explorer page's outer 8px margins. No desktop changes.
+st.html("""<style>
+@media (max-width: 768px) {
+    .st-key-combined_chart {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+}
+</style>""")
+
+
 # Mobile Overlay: preserve full labels while making the two line keys compact.
 # Desktop positioning and the native chart toolbar remain unchanged.
 st.html("""<style>
 @media (max-width: 768px) {
     .st-key-combined_chart .lme-overlay-line-keys {
-        padding-right: 0 !important;
+        /* Reserve room for the always-visible Fullscreen button. */
+        padding-right: 38px !important;
         gap: 6px !important;
         margin-bottom: 7px !important;
     }
@@ -1758,6 +1833,12 @@ st.html("""<style>
     .st-key-combined_chart .lme-overlay-line-keys > div > span:last-child {
         font-size: 12.5px !important;
         line-height: 1.25 !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        display: block !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }
 }
 </style>""")

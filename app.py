@@ -77,6 +77,10 @@ if st.session_state.lme_screen == "welcome":
     )
     st.stop()
 
+# New Explorer sessions begin with one chart. Existing user selections persist.
+# The ui.py header accepts this semantic value without any modification.
+st.session_state.setdefault("chart_layout", "Single")
+
 # Main Explorer
 layout_mode, view_mode = render_header(show_layout_control=True)
 
@@ -387,6 +391,146 @@ st.html(
     </style>""",
 )
 
+
+# V13 navigator presentation only. Kept separate from the existing chart CSS.
+st.html(
+    """<style>
+    /* Dark Slate controls, scoped to the new Occupation Navigator only. */
+    div[class*="st-key-occupation_picker_row_"] [data-testid="stPopover"] button {
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 38px !important;
+        background: #2d3b4c !important;
+        border: 1px solid #586c82 !important;
+        border-radius: 9px !important;
+        box-shadow: none !important;
+        color: #f5f8fc !important;
+        justify-content: flex-start !important;
+        overflow: hidden !important;
+    }
+    div[class*="st-key-occupation_picker_row_"] [data-testid="stPopover"] button :is(p, span) {
+        color: #f5f8fc !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        min-width: 0 !important;
+    }
+    div[class*="st-key-occupation_picker_row_"] [data-testid="stPopover"] button:hover {
+        background: #35465a !important;
+        border-color: #8b9fb8 !important;
+    }
+    div[class*="st-key-occupation_picker_row_"] [data-testid="stPopover"] button:disabled {
+        opacity: 0.52 !important;
+        cursor: not-allowed !important;
+    }
+    div[class*="st-key-occupation_back_"] button {
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        color: #f5f8fc !important;
+        white-space: nowrap !important;
+        padding: 0.15rem 0.25rem !important;
+        min-height: 30px !important;
+    }
+    div[class*="st-key-occupation_back_"] button:disabled {
+        opacity: 0.4 !important;
+    }
+    /* The Back button belongs at the card's right edge, not centered in a
+       wide trailing column. Keep its narrow-width phone behavior unchanged. */
+    @media (min-width: 769px) {
+        /* Keep Occupation and Back in the SAME row on desktop.
+           Only scope this to the navigator heading, not chart columns. */
+        div[class*="st-key-occupation_heading_"] [data-testid="stHorizontalBlock"] {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+        }
+        div[class*="st-key-occupation_heading_"] [data-testid="stHorizontalBlock"]
+        > [data-testid="stColumn"]:first-child {
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+        }
+        div[class*="st-key-occupation_heading_"] [data-testid="stHorizontalBlock"]
+        > [data-testid="stColumn"]:last-child {
+            flex: 0 0 65px !important;
+            width: 65px !important;
+            min-width: 65px !important;
+            max-width: 65px !important;
+        }
+    }
+    /* Widen the opened picker, not the permanent controls row. */
+    body:has(.st-key-lme_explorer_toolbar)
+    [data-testid="stPopoverBody"]:has(.lme-v13-occupation-popup-marker) {
+        width: min(490px, calc(100vw - 24px)) !important;
+        max-width: calc(100vw - 24px) !important;
+        background: #293746 !important;
+        border: 1px solid #65758a !important;
+        border-radius: 10px !important;
+        box-shadow: 0 12px 28px rgba(12, 22, 34, 0.22) !important;
+    }
+    body:has(.st-key-lme_explorer_toolbar)
+    [data-testid="stPopoverBody"]:has(.lme-v13-occupation-popup-marker)
+    :is(p, span, label) {
+        color: #f5f8fc !important;
+    }
+    /* Dark recessed search field inside the expanded popover. */
+    body:has(.st-key-lme_explorer_toolbar)
+    [data-testid="stPopoverBody"]:has(.lme-v13-occupation-popup-marker)
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+        background: #2d3b4c !important;
+        border: 1px solid #586c82 !important;
+        border-radius: 9px !important;
+    }
+    body:has(.st-key-lme_explorer_toolbar)
+    [data-testid="stPopoverBody"]:has(.lme-v13-occupation-popup-marker)
+    [data-testid="stSelectbox"] [role="combobox"] {
+        background: #2d3b4c !important;
+        color: #f5f8fc !important;
+    }
+    /* Streamlit may stack columns on a phone; retain Search + Browse in one row. */
+    @media (max-width: 768px) {
+        div[class*="st-key-occupation_picker_row_"] [data-testid="stHorizontalBlock"] {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            gap: 0.45rem !important;
+        }
+        div[class*="st-key-occupation_picker_row_"] [data-testid="stHorizontalBlock"]
+        > [data-testid="stColumn"]:first-child {
+            min-width: 0 !important;
+            width: auto !important;
+            flex: 1 1 0 !important;
+        }
+        div[class*="st-key-occupation_picker_row_"] [data-testid="stHorizontalBlock"]
+        > [data-testid="stColumn"]:last-child {
+            min-width: 96px !important;
+            width: 96px !important;
+            max-width: 96px !important;
+            flex: 0 0 96px !important;
+        }
+        div[class*="st-key-occupation_heading_"] [data-testid="stHorizontalBlock"] {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+        }
+        div[class*="st-key-occupation_heading_"] [data-testid="stHorizontalBlock"]
+        > [data-testid="stColumn"]:first-child {
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+        }
+        div[class*="st-key-occupation_heading_"] [data-testid="stHorizontalBlock"]
+        > [data-testid="stColumn"]:last-child {
+            flex: 0 0 76px !important;
+            width: 76px !important;
+            max-width: 76px !important;
+            min-width: 76px !important;
+        }
+    }
+    </style>"""
+)
+
 # V11a visual theme experiment. Local preview only; V10 chart toolbar rules,
 # chart data and widget behavior are deliberately left unchanged.
 # To revert: remove this single st.html block.
@@ -620,6 +764,70 @@ st.html(
     button svg {
         color: #243245 !important;
     }
+    /* Qualification buttons: reuse the Occupation input palette.
+       Natural widths, separate rounded buttons, no overlap. */
+    :is(.st-key-controls_a, .st-key-controls_b)
+    div[class*="st-key-qualification_tabs_"] [data-testid="stSegmentedControl"] [role="group"] {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        width: max-content !important;
+        min-width: max-content !important;
+        max-width: none !important;
+        /* The native segmented-control markup can wrap individual buttons.
+           A gap here alone does not reliably separate the visible buttons. */
+        gap: 0 !important;
+        border: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+    :is(.st-key-controls_a, .st-key-controls_b)
+    div[class*="st-key-qualification_tabs_"] button[data-variant="segmented_control"] {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        min-width: max-content !important;
+        /* Margin on the button itself also works when Streamlit inserts
+           intermediate wrappers between the group and its buttons. */
+        margin: 0 5px 0 0 !important;
+        padding: 0.34rem 0.76rem !important;
+        justify-content: center !important;
+        text-align: center !important;
+        background: #485A70 !important;
+        color: #F5F8FC !important;
+        border: 0 !important;
+        border-radius: 8px !important;
+        box-shadow: none !important;
+        white-space: nowrap !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+    }
+    :is(.st-key-controls_a, .st-key-controls_b)
+    div[class*="st-key-qualification_tabs_"] button[data-variant="segmented_control"] :is(p, span) {
+        color: inherit !important;
+        white-space: nowrap !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+    }
+    :is(.st-key-controls_a, .st-key-controls_b)
+    div[class*="st-key-qualification_tabs_"] button[data-variant="segmented_control"]:hover {
+        background: #35465A !important;
+        color: #FFFFFF !important;
+    }
+    :is(.st-key-controls_a, .st-key-controls_b)
+    div[class*="st-key-qualification_tabs_"] button[data-variant="segmented_control"][data-selected="true"],
+    :is(.st-key-controls_a, .st-key-controls_b)
+    div[class*="st-key-qualification_tabs_"] button[data-variant="segmented_control"][data-selected="true"]:hover {
+        background: #6C8099 !important;
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+    }
+    @media (max-width: 600px) {
+        :is(.st-key-controls_a, .st-key-controls_b)
+        div[class*="st-key-qualification_tabs_"] button[data-variant="segmented_control"] {
+            font-size: 0.78rem !important;
+            padding: 0.34rem 0.60rem !important;
+        }
+    }
+
     </style>"""
 )
 
@@ -687,11 +895,40 @@ def render_indicator_legend(chart_container, chart_number: int, group: str = "")
             st.rerun()
 
 
+# Overlay uses a separate, shared indicator selection. Initialize it only once
+# from the union of the current independent A/B choices. Never write back to A/B.
+def ensure_overlay_indicators() -> None:
+    if st.session_state.get("overlay_indicators_initialized", False):
+        return
+    for label, _ in INDICATOR_LEGEND:
+        a = bool(st.session_state.get(f"indicator_state_1_{label}", label != "Job seekers"))
+        b = bool(st.session_state.get(f"indicator_state_2_{label}", label != "Job seekers"))
+        st.session_state[f"overlay_indicator_{label}"] = a or b
+    st.session_state["overlay_indicators_initialized"] = True
+
+
+def render_overlay_indicator_legend(chart_container) -> None:
+    legend = chart_container.container(key="indicator_legend_overlay")
+    columns = legend.columns(4, gap="small")
+    for column, (label, dot) in zip(columns, INDICATOR_LEGEND):
+        state_key = f"overlay_indicator_{label}"
+        enabled = bool(st.session_state.get(state_key, False))
+        if column.button(
+            f"{dot}  {label}" if enabled else f"◯  {label}",
+            key=f"indicator_button_overlay_{label}",
+            help=f"{'Hide' if enabled else 'Show'} {label.lower()} for both occupations",
+            width="stretch",
+        ):
+            st.session_state[state_key] = not enabled
+            st.rerun()
+
+
 def render_chart(
     chart_number: int,
     controls_container,
     chart_container,
     render_output: bool = True,
+    indicator_override: dict[str, bool] | None = None,
 ):
 
     controls = controls_container
@@ -832,141 +1069,199 @@ def render_chart(
 
 
     # ---------------------------------------------------------
-    # Occupation
+    # V13 preview — compact Occupation Navigator
     # ---------------------------------------------------------
+    # Preserve the semantic occupation state used by the charts. Search and
+    # Browse are two different paths to the same selected occupation code.
+    # Each analysis (A/B) has its own widget keys and selection state.
 
-    selected_code = st.session_state[selected_code_key]
-
-    if selected_code != GERMANY_CODE:
-        if controls.button(
-            "‹ Back",
-            key=f"occupation_back_{chart_number}",
-            type="tertiary",
-        ):
-            parent_code = get_parent_code(selected_code)
-
-            if parent_code is None:
-                st.session_state[selected_code_key] = GERMANY_CODE
-            else:
-                st.session_state[selected_code_key] = str(parent_code)
-
-            st.rerun()
-
-    # Inline on desktop: Occupation: | Search | Browse.
-    # On narrow screens Streamlit stacks the three columns naturally.
-    occupation_label_col, search_col, browse_col = controls.columns(
-        [1.35, 3.5, 3.5], gap="small", vertical_alignment="center"
-    )
-    occupation_label_col.markdown(
-        '<span style="font-size: 0.86rem; font-weight: 600; '
-        'white-space: nowrap;">Occupation:</span>',
-        unsafe_allow_html=True,
-    )
-
-    # ---------------------------------------------------------
-    # Global search
-    # ---------------------------------------------------------
-
-    search_codes = (
-        occupations["occupation_code"]
-        .astype(str)
-        .tolist()
-    )
-
+    selected_code = str(st.session_state[selected_code_key])
     search_names = dict(
         zip(
             occupations["occupation_code"].astype(str),
             occupations["occupation_name"].astype(str),
         )
     )
-
-    search_options = [None, GERMANY_CODE] + search_codes
-
-    search_key = (
-        f"occupation_search_"
-        f"{chart_number}_{st.session_state[selected_code_key]}"
+    selected_label = (
+        GERMANY_LABEL
+        if selected_code == GERMANY_CODE
+        else search_names.get(selected_code, selected_code)
     )
+    child_rows = get_children(None if selected_code == GERMANY_CODE else selected_code)
+    has_children = not child_rows.empty
 
-    searched_code = search_col.selectbox(
-        "Search occupations",
-        search_options,
-        index=0,
-        format_func=lambda code: (
-            "🔎 All occupations"
-            if code is None
-            else GERMANY_LABEL
-            if code == GERMANY_CODE
-            else search_names[code]
-        ),
-        key=search_key,
-        label_visibility="collapsed",
+    # First row: the caption and a stable Back control. Back is disabled at
+    # the root so its appearance/disappearance never shifts the filters.
+    heading = controls.container(key=f"occupation_heading_{chart_number}")
+    caption_col, back_col = heading.columns(
+        [12, 1], gap="small", vertical_alignment="center"
     )
-
-    if (
-        searched_code is not None
-        and str(searched_code)
-        != str(st.session_state[selected_code_key])
+    caption_col.markdown(
+        '<span style="font-size:0.86rem;font-weight:600;">Occupation:</span>',
+        unsafe_allow_html=True,
+    )
+    if back_col.button(
+        "‹ Back",
+        key=f"occupation_back_{chart_number}",
+        type="tertiary",
+        disabled=selected_code == GERMANY_CODE,
+        width="stretch",
+        help="Go to the parent occupation category",
     ):
-        st.session_state[selected_code_key] = str(searched_code)
+        parent_code = get_parent_code(selected_code)
+        st.session_state[selected_code_key] = (
+            str(parent_code) if parent_code is not None else GERMANY_CODE
+        )
         st.rerun()
 
-
-    # ---------------------------------------------------------
-    # Browse by category
-    # ---------------------------------------------------------
-
-    selected_code = str(
-        st.session_state[selected_code_key]
+    # Second row: Search / Browse share a single compact row on every screen.
+    # Desktop: use native dropdowns directly (no nested popover + dropdown).
+    # Mobile: retain the compact buttons and existing wider popovers.
+    # Both layouts use the same semantic selected_occupation_code state.
+    mobile_picker = _lme_viewport_mode in ("portrait", "landscape")
+    pickers = controls.container(key=f"occupation_picker_row_{chart_number}")
+    search_col, browse_col = pickers.columns(
+        [3.8, 1.2] if mobile_picker else [1, 1],
+        gap="small",
+        vertical_alignment="center",
     )
 
-    if selected_code == GERMANY_CODE:
-        browse_parent = None
+    child_names = dict(
+        zip(
+            child_rows["occupation_code"].astype(str),
+            child_rows["occupation_name"].astype(str),
+        )
+    )
+
+    if not mobile_picker:
+        # Show the *actual selection*, rather than a transient Search prompt.
+        # Tying widget keys to the semantic code lets Back / Browse update the
+        # displayed value without trying to mutate an existing widget key.
+        search_options = [GERMANY_CODE] + list(search_names)
+        desktop_search_key = (
+            f"v13_desktop_occupation_search_{chart_number}_{selected_code}"
+        )
+
+        def on_desktop_search():
+            picked = st.session_state.get(desktop_search_key)
+            if picked is not None:
+                st.session_state[selected_code_key] = str(picked)
+
+        with search_col:
+            st.selectbox(
+                "Search occupations",
+                options=search_options,
+                index=(
+                    search_options.index(selected_code)
+                    if selected_code in search_options else 0
+                ),
+                format_func=lambda code: (
+                    f"🔎 {GERMANY_LABEL}" if code == GERMANY_CODE
+                    else search_names[code]
+                ),
+                key=desktop_search_key,
+                on_change=on_desktop_search,
+                label_visibility="collapsed",
+                width="stretch",
+            )
+
+        desktop_browse_key = (
+            f"v13_desktop_occupation_browse_{chart_number}_{selected_code}"
+        )
+
+        def on_desktop_browse():
+            picked = st.session_state.get(desktop_browse_key)
+            if picked is not None:
+                st.session_state[selected_code_key] = str(picked)
+
+        with browse_col:
+            st.selectbox(
+                "Categories",
+                options=[None] + list(child_names),
+                index=0,
+                format_func=lambda code: (
+                    "Categories" if code is None and has_children
+                    else "No further categories" if code is None
+                    else child_names[code]
+                ),
+                key=desktop_browse_key,
+                on_change=on_desktop_browse,
+                disabled=not has_children,
+                label_visibility="collapsed",
+                width="stretch",
+            )
     else:
-        browse_parent = selected_code
+        # Keep the tested V13 mobile navigator unchanged.
+        search_picker_key = f"v13_occupation_search_{chart_number}"
 
-    children = get_children(browse_parent)
+        def on_search_occupation():
+            picked = st.session_state.get(search_picker_key)
+            if picked is not None:
+                st.session_state[selected_code_key] = str(picked)
+                st.session_state[search_picker_key] = None
 
-    if not children.empty:
+        with search_col:
+            with st.popover(
+                f"⌕  {selected_label}",
+                width="stretch",
+                help="Search across all occupation categories",
+            ):
+                st.markdown(
+                    '<span class="lme-v13-occupation-popup-marker"></span>',
+                    unsafe_allow_html=True,
+                )
+                st.caption("Search all occupations")
+                st.selectbox(
+                    "Find an occupation",
+                    options=[None, GERMANY_CODE] + list(search_names),
+                    index=0,
+                    format_func=lambda code: (
+                        "Type to search occupations..." if code is None
+                        else GERMANY_LABEL if code == GERMANY_CODE
+                        else search_names[code]
+                    ),
+                    key=search_picker_key,
+                    on_change=on_search_occupation,
+                    label_visibility="collapsed",
+                    width="stretch",
+                )
 
-        child_codes = (
-            children["occupation_code"]
-            .astype(str)
-            .tolist()
-        )
+        browse_picker_key = f"v13_occupation_browse_{chart_number}"
 
-        child_names = dict(
-            zip(
-                children["occupation_code"].astype(str),
-                children["occupation_name"].astype(str),
-            )
-        )
+        def on_browse_occupation():
+            picked = st.session_state.get(browse_picker_key)
+            if picked is not None:
+                st.session_state[selected_code_key] = str(picked)
+                st.session_state[browse_picker_key] = None
 
-        child_options = [None] + child_codes
-
-        browse_key = (
-            f"occupation_browse_"
-            f"{chart_number}_{selected_code}"
-        )
-
-        selected_child = browse_col.selectbox(
-            "Browse by category",
-            child_options,
-            index=0,
-            format_func=lambda code: (
-                "Browse by category"
-                if code is None
-                else child_names[code]
-            ),
-            key=browse_key,
-            label_visibility="collapsed",
-        )
-
-        if selected_child is not None:
-            st.session_state[selected_code_key] = str(
-                selected_child
-            )
-
-            st.rerun()
+        with browse_col:
+            with st.popover(
+                "Categories",
+                width="stretch",
+                disabled=not has_children,
+                help=(
+                    "Browse the next level of the KldB classification"
+                    if has_children else "No further subcategories; use Back or Search"
+                ),
+            ):
+                st.markdown(
+                    '<span class="lme-v13-occupation-popup-marker"></span>',
+                    unsafe_allow_html=True,
+                )
+                st.caption(f"Subcategories of {selected_label}")
+                st.selectbox(
+                    "Choose a subcategory",
+                    options=[None] + list(child_names),
+                    index=0,
+                    format_func=lambda code: (
+                        "Choose a subcategory..." if code is None
+                        else child_names[code]
+                    ),
+                    key=browse_picker_key,
+                    on_change=on_browse_occupation,
+                    label_visibility="collapsed",
+                    width="stretch",
+                )
 
 
     # ---------------------------------------------------------
@@ -1078,16 +1373,19 @@ def render_chart(
     st.session_state[qualification_state_key] = selected_qualification
 
     if qualification_options:
-        # Inline on desktop: Qualification: | Overall | Helpers | ...
-        # The label precedes the selector when columns stack on mobile.
-        qualification_label_col, qualification_choice_col = controls.columns(
-            [1.35, 7.0], gap="small", vertical_alignment="center"
-        )
-        qualification_label_col.markdown(
-            '<span style="font-size: 0.86rem; font-weight: 600; '
-            'white-space: nowrap;">Qualification:</span>',
-            unsafe_allow_html=True,
-        )
+        # Desktop keeps the visible Qualification label inline. On phone-sized
+        # viewports, keep the accessible widget label but omit the extra row.
+        if _lme_viewport_mode == "desktop":
+            qualification_label_col, qualification_choice_col = controls.columns(
+                [1.35, 7.0], gap="small", vertical_alignment="center"
+            )
+            qualification_label_col.markdown(
+                '<span style="font-size: 0.86rem; font-weight: 600; '
+                'white-space: nowrap;">Qualification:</span>',
+                unsafe_allow_html=True,
+            )
+        else:
+            qualification_choice_col = controls
 
         # Reconcile old selections before creating the new segmented widget.
         st.session_state[qualification_widget_key] = selected_qualification
@@ -1230,7 +1528,9 @@ def render_chart(
         state_key = f"indicator_state_{chart_number}_{label}"
         if state_key not in st.session_state:
             st.session_state[state_key] = label != "Job seekers"
-        if st.session_state[state_key]:
+        enabled = (st.session_state[state_key] if indicator_override is None
+                   else indicator_override.get(label, False))
+        if enabled:
             selected_indicators.append(indicator)
 
     if not selected_indicators:
@@ -1439,13 +1739,68 @@ def render_chart(
     render_indicator_legend(chart_container, chart_number)
 
 
+# Mobile Overlay: preserve full labels while making the two line keys compact.
+# Desktop positioning and the native chart toolbar remain unchanged.
+st.html("""<style>
+@media (max-width: 768px) {
+    .st-key-combined_chart .lme-overlay-line-keys {
+        padding-right: 0 !important;
+        gap: 6px !important;
+        margin-bottom: 7px !important;
+    }
+    .st-key-combined_chart .lme-overlay-line-keys > div {
+        gap: 7px !important;
+    }
+    .st-key-combined_chart .lme-overlay-line-keys span[aria-hidden="true"] {
+        flex: 0 0 28px !important;
+        width: 28px !important;
+    }
+    .st-key-combined_chart .lme-overlay-line-keys > div > span:last-child {
+        font-size: 12.5px !important;
+        line-height: 1.25 !important;
+    }
+}
+</style>""")
+
+
 def render_combined_chart(payload_a, payload_b, chart_container) -> None:
     """Draw both independently configured selections on one shared plot."""
-    chart_container.caption("Combined chart")
-    title_a = f"{payload_a['display_name']} · {payload_a['qualification_label']}"
-    title_b = f"{payload_b['display_name']} · {payload_b['qualification_label']}"
+    # Two self-contained line keys above the plot replace the repeated A/B
+    # explanation and the native Vega stroke-dash legend. Keep A/B internally.
+    # Match Overlay legend labels to the qualification selector; do not alter
+    # the underlying German BA values or the One/Two chart labels.
+    short_qualifications = {
+        "Overall": "All", "Helpers": "Helper",
+        "Specialists": "Specialist", "Experts": "Expert",
+    }
+
+    def overlay_label(payload):
+        qualification = payload["qualification_label"]
+        qualification = short_qualifications.get(qualification, qualification)
+        return f"{payload['display_name']} · {qualification}"
+
+    title_a = overlay_label(payload_a)
+    title_b = overlay_label(payload_b)
+    safe_a = html.escape(title_a, quote=True)
+    safe_b = html.escape(title_b, quote=True)
     chart_container.markdown(
-        f"**A:** {title_a} &nbsp;&nbsp; **B:** {title_b}"
+        f"""
+        <div class="lme-overlay-line-keys" style="
+            display:flex; flex-direction:column; gap:8px;
+            padding-right:110px; margin:2px 0 7px; min-width:0;">
+          <div style="display:flex;align-items:center;gap:11px;min-width:0;">
+            <span aria-hidden="true" style="display:inline-block;flex:0 0 42px;
+              width:42px;border-top:3px solid #91b6e2;"></span>
+            <span style="font-weight:600;line-height:1.35;overflow-wrap:anywhere;">{safe_a}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:11px;min-width:0;">
+            <span aria-hidden="true" style="display:inline-block;flex:0 0 42px;
+              width:42px;border-top:3px dashed #91b6e2;"></span>
+            <span style="font-weight:600;line-height:1.35;overflow-wrap:anywhere;">{safe_b}</span>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
     frames = []
@@ -1454,14 +1809,13 @@ def render_combined_chart(payload_a, payload_b, chart_container) -> None:
         if not frame.empty:
             frame["selection"] = label
             frame["occupation_selection"] = (
-                f"{payload['display_name']} · {payload['qualification_label']}"
+                overlay_label(payload)
             )
             frames.append(frame)
 
     if not frames:
         chart_container.info("Choose at least one indicator in the legend below.")
-        render_indicator_legend(chart_container, 1, group="A")
-        render_indicator_legend(chart_container, 2, group="B")
+        render_overlay_indicator_legend(chart_container)
         return
 
     plot_df = pd.concat(frames, ignore_index=True)
@@ -1485,7 +1839,7 @@ def render_combined_chart(payload_a, payload_b, chart_container) -> None:
             strokeDash=alt.StrokeDash(
                 "selection:N",
                 scale=alt.Scale(domain=["A", "B"], range=[[1, 0], [6, 3]]),
-                title="Controls",
+                legend=None,
             ),
             tooltip=[
                 alt.Tooltip("report_date:T", title="Date"),
@@ -1500,10 +1854,50 @@ def render_combined_chart(payload_a, payload_b, chart_container) -> None:
     if ENABLE_CHART_PAN_ZOOM:
         chart = chart.interactive()
     chart_container.altair_chart(chart, width="stretch")
-    # Overlay shows one plot but still has independently configurable A/B series.
-    render_indicator_legend(chart_container, 1, group="A")
-    render_indicator_legend(chart_container, 2, group="B")
+    # One shared set of indicators for both occupation selections.
+    render_overlay_indicator_legend(chart_container)
 
+
+# Equal Qualification button widths only on desktop. Preserve natural widths
+# and scrolling on phone-sized displays. These selectors target only the
+# qualification segmented controls; no global button styling is changed.
+st.html("""<style>
+@media (min-width: 1061px) {
+    :is(.st-key-controls_a, .st-key-controls_b)
+    div[class*="st-key-qualification_tabs_"]
+    button[data-variant="segmented_control"] {
+        width: 84px !important;
+        min-width: 84px !important;
+        max-width: 84px !important;
+        box-sizing: border-box !important;
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+        flex: 0 0 84px !important;
+    }
+}
+</style>""")
+
+
+# In desktop Single mode, center the only analysis card and leave room on both
+# sides. Below 1061px, keep the native full-width mobile/tablet layout.
+st.html("""<style>
+@media (min-width: 1061px) {
+    .st-key-lme_single_workspace {
+        width: 100% !important;
+        max-width: 900px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+    /* Overlay controls retain exactly the Two layout (full page width).
+       Center ONLY the combined chart card, matching the 900px One card. */
+    .st-key-lme_overlay_chart_workspace {
+        width: 100% !important;
+        max-width: 900px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+}
+</style>""")
 
 # Controls and chart output adapt to the selected workspace layout.
 # Compare and Single: one card per analysis, with a subtle divider between
@@ -1522,16 +1916,26 @@ if layout_mode == "Compare":
     render_chart(1, controls_a, chart_a)
     render_chart(2, controls_b, chart_b)
 elif layout_mode == "Combined":
-    # Overlay still uses two independent controls and one shared chart.
+    # Keep the same full-width two-column controls layout as Two.
+    # Center only the combined plot card on desktop; retain mobile width.
     controls_a_col, controls_b_col = st.columns([1, 1], gap="medium")
     with controls_a_col:
         controls_a = st.container(border=True, key="controls_a")
     with controls_b_col:
         controls_b = st.container(border=True, key="controls_b")
-    combined_chart = st.container(border=True, key="combined_chart")
-    payload_a = render_chart(1, controls_a, None, render_output=False)
-    payload_b = render_chart(2, controls_b, None, render_output=False)
+    overlay_chart_workspace = st.container(key="lme_overlay_chart_workspace")
+    combined_chart = overlay_chart_workspace.container(border=True, key="combined_chart")
+    ensure_overlay_indicators()
+    overlay_selection = {
+        label: bool(st.session_state[f"overlay_indicator_{label}"])
+        for label, _ in INDICATOR_LEGEND
+    }
+    payload_a = render_chart(1, controls_a, None, render_output=False,
+                             indicator_override=overlay_selection)
+    payload_b = render_chart(2, controls_b, None, render_output=False,
+                             indicator_override=overlay_selection)
     render_combined_chart(payload_a, payload_b, combined_chart)
 else:
-    controls_a, chart_a = make_analysis_card(st, "a")
+    single_workspace = st.container(key="lme_single_workspace")
+    controls_a, chart_a = make_analysis_card(single_workspace, "a")
     render_chart(1, controls_a, chart_a)

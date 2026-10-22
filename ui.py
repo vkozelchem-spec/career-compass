@@ -891,6 +891,80 @@ def _explorer_header_style() -> str:
               margin-bottom: 0.55rem;
           }
       }
+
+      /* V14 mobile toolbar preview: ONE line, desktop selectors untouched.
+         The media condition matches app.py's phone-sized viewport detection. */
+      .st-key-lme_explorer_toolbar .st-key-lme_mobile_compare {
+          display: none !important;
+      }
+      @media (max-width: 600px) and (max-height: 1000px),
+             (max-height: 600px) and (max-width: 1000px) {
+          /* Four visible slots: Home / languages / 2 modes / comparison. */
+          .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] {
+              grid-template-columns: 58px minmax(0, 1fr) 91px 42px !important;
+              gap: 0.15rem !important;
+              align-items: center !important;
+          }
+          .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"]
+          > div[data-testid="stColumn"]:nth-child(1) {
+              grid-column: 1 !important;
+          }
+          .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"]
+          > div[data-testid="stColumn"]:nth-child(2) {
+              grid-column: 2 !important;
+          }
+          .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"]
+          > div[data-testid="stColumn"]:nth-child(4) {
+              grid-column: 3 !important;
+          }
+          .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"]
+          > div[data-testid="stColumn"]:nth-child(6) {
+              grid-column: 4 !important;
+          }
+          .st-key-lme_explorer_toolbar .lme-language-strip {
+              gap: 0.2rem !important;
+              font-size: 0.82rem !important;
+          }
+          /* Hide textual One/Two/Overlay only on phone-size screens. */
+          .st-key-lme_explorer_toolbar .st-key-chart_layout {
+              display: none !important;
+          }
+          .st-key-lme_explorer_toolbar .st-key-lme_mobile_compare {
+              display: block !important;
+          }
+          .st-key-lme_explorer_toolbar .st-key-lme_mobile_compare button {
+              width: 42px !important;
+              min-width: 42px !important;
+              height: 38px !important;
+              min-height: 38px !important;
+              padding: 0 !important;
+              background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI4IDI4IiBmaWxsPSJub25lIiBzdHJva2U9IiMxNzE3MTciIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxyZWN0IHg9IjMiIHk9IjQiIHdpZHRoPSIyMiIgaGVpZ2h0PSIyMCIgcng9IjIuNSIvPjxwYXRoIGQ9Ik0zIDEwaDIyIE0xNCAxMHYxNCIvPjwvc3ZnPg==") !important;
+              background-position: center !important;
+              background-repeat: no-repeat !important;
+              background-size: 23px 23px !important;
+              border: 0 !important;
+              border-radius: 7px !important;
+              box-shadow: none !important;
+              font-size: 0 !important;
+              line-height: 0 !important;
+          }
+          .st-key-lme_explorer_toolbar .st-key-lme_mobile_compare button * {
+              font-size: 0 !important;
+              line-height: 0 !important;
+          }
+          .st-key-lme_explorer_toolbar .st-key-lme_mobile_compare button:hover {
+              background-color: #f0f1f3 !important;
+          }
+          /* The nested icon pair retains its horizontal layout. */
+          .st-key-lme_explorer_toolbar .st-key-lme_view_buttons div[data-testid="stHorizontalBlock"] {
+              display: flex !important;
+              gap: 0.15rem !important;
+          }
+          .st-key-lme_explorer_toolbar {
+              padding-bottom: 0.35rem;
+              margin-bottom: 0.45rem;
+          }
+      }
     </style>
     """
 
@@ -905,6 +979,16 @@ def _render_explorer_header():
         st.session_state.global_view_mode = "Absolute"
     if st.session_state.get("chart_layout") not in ("Single", "Compare", "Combined"):
         st.session_state.chart_layout = "Compare"
+    # The phone UI offers only One and Overlay. If a user arrives from a
+    # desktop Two session, start from One instead of showing an invisible mode.
+    if (st.session_state.get("lme_last_viewport_mode") in ("portrait", "landscape")
+            and st.session_state.chart_layout == "Compare"):
+        st.session_state.chart_layout = "Single"
+
+    def toggle_mobile_compare():
+        st.session_state.chart_layout = (
+            "Single" if st.session_state.chart_layout == "Combined" else "Combined"
+        )
 
     layout_labels = {
         "Single": "One",
@@ -923,6 +1007,12 @@ def _render_explorer_header():
         'button { background-color: #e9ebef !important; }</style>',
         unsafe_allow_html=True,
     )
+    if st.session_state.chart_layout == "Combined":
+        st.markdown(
+            '<style>.st-key-lme_explorer_toolbar .st-key-lme_mobile_compare '
+            'button { background-color: #e9ebef !important; }</style>',
+            unsafe_allow_html=True,
+        )
 
     with st.container(key="lme_explorer_toolbar"):
         home_col, language_col, spacer_col, view_col, divider_col, layout_col = st.columns(
@@ -989,6 +1079,18 @@ def _render_explorer_header():
             )
 
         with layout_col:
+            # Native mobile comparison toggle. It reuses the established
+            # Single/Combined values; app.py and both chart renderers are intact.
+            st.button(
+                "Exit comparison" if st.session_state.chart_layout == "Combined"
+                else "Compare occupations",
+                key="lme_mobile_compare",
+                type="tertiary",
+                help="Return to one chart" if st.session_state.chart_layout == "Combined"
+                else "Compare two occupations (Overlay)",
+                on_click=toggle_mobile_compare,
+                width="stretch",
+            )
             st.segmented_control(
                 "Chart layout",
                 options=list(layout_labels),

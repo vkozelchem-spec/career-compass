@@ -279,7 +279,7 @@ if _lme_viewport_mode in ("portrait", "landscape"):
         :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
         :is([data-testid="stElementToolbar"], .stElementToolbar) {
             position: absolute !important;
-            inset: -34px 0 auto auto !important;
+            inset: -42px 0 auto auto !important;
             margin: 0 !important;
             z-index: 30 !important;
             opacity: 1 !important;
@@ -320,6 +320,16 @@ if _lme_viewport_mode in ("portrait", "landscape"):
             opacity: 1 !important;
             visibility: visible !important;
             pointer-events: auto !important;
+        }
+
+        /* V18 mobile: keep the Fullscreen icon on its tested title row as
+           the space below that row increases by 8px. For Overlay, keep it
+           alongside the FIRST legend row, INSIDE the black chart card.
+           Actual browser fullscreen retains the 8px screen-corner inset. */
+        body:not(:has(:fullscreen))
+        .st-key-combined_chart
+        :is([data-testid="stElementToolbar"], .stElementToolbar) {
+            inset: -66px 0 auto auto !important;
         }
         </style>"""
     )
@@ -592,6 +602,98 @@ st.html(
     }
     </style>"""
 )
+
+
+# V15 mobile navigator: ONE real selectbox, no Streamlit popover.
+# Desktop controls and chart rendering remain untouched.
+if _lme_viewport_mode in ("portrait", "landscape"):
+    st.html("""<style>
+    /* Keep a single wide native selectbox and a finger-sized mode toggle. */
+    div[class*="st-key-occupation_picker_row_"]
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child {
+        flex: 0 0 44px !important;
+        width: 44px !important;
+        min-width: 44px !important;
+        max-width: 44px !important;
+    }
+    div[class*="st-key-occupation_picker_row_"]
+    [data-testid="stSelectbox"] {
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+    div[class*="st-key-occupation_picker_row_"]
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+        min-height: 40px !important;
+        background-color: #2d3b4c !important;
+        border: 1px solid #586c82 !important;
+        border-radius: 9px !important;
+    }
+    div[class*="st-key-occupation_picker_row_"]
+    [data-testid="stSelectbox"] [data-baseweb="select"] :is(input,span,svg) {
+        color: #f5f8fc !important;
+    }
+    div[class*="st-key-mobile_occupation_mode_"] button {
+        width: 44px !important;
+        min-width: 44px !important;
+        height: 40px !important;
+        min-height: 40px !important;
+        padding: 0 !important;
+        background: #2d3b4c !important;
+        color: #f5f8fc !important;
+        border: 1px solid #586c82 !important;
+        border-radius: 9px !important;
+        box-shadow: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        position: relative !important;
+    }
+    div[class*="st-key-mobile_occupation_mode_"] button p {
+        font-size: 0 !important;
+        width: 0 !important;
+        overflow: hidden !important;
+    }
+    /* V15.1: simplified hierarchy symbol. Thin strokes and generous internal
+       space read better at actual phone size than the previous dense glyph. */
+    div[class*="st-key-mobile_occupation_mode_"] button::before {
+        content: "";
+        display: block;
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        margin: 0 !important;
+        width: 22px;
+        height: 22px;
+        background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23eaf0f6%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%229.5%22%20y%3D%222.5%22%20width%3D%225%22%20height%3D%224.5%22%20rx%3D%221.2%22%2F%3E%3Cpath%20d%3D%22M12%207v4.5M5.5%2015v-3.5h13V15%22%2F%3E%3Crect%20x%3D%222.5%22%20y%3D%2215%22%20width%3D%226%22%20height%3D%225.5%22%20rx%3D%221.2%22%2F%3E%3Crect%20x%3D%2215.5%22%20y%3D%2215%22%20width%3D%226%22%20height%3D%225.5%22%20rx%3D%221.2%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+    }
+    div[class*="st-key-mobile_occupation_mode_"] button:hover {
+        background: #35465a !important;
+        border-color: #8194ab !important;
+    }
+    /* Selected = same muted palette as the qualification controls; one border,
+       no doubled white rim or glow. This does not change the mode logic. */
+    div[class*="st-key-mobile_occupation_mode_"] button[kind="primary"],
+    div[class*="st-key-mobile_occupation_mode_"] button[data-testid="stBaseButton-primary"] {
+        background: #52677f !important;
+        border: 1px solid #a1b2c7 !important;
+        box-shadow: none !important;
+    }
+    div[class*="st-key-mobile_occupation_mode_"] button[kind="primary"]:hover,
+    div[class*="st-key-mobile_occupation_mode_"] button[data-testid="stBaseButton-primary"]:hover {
+        background: #5d738c !important;
+    }
+    /* Touch focus must not look like a second active-state border.
+       Keep an explicit outline for keyboard navigation. */
+    div[class*="st-key-mobile_occupation_mode_"] button:focus:not(:focus-visible) {
+        outline: none !important;
+        box-shadow: none !important;
+    }
+    div[class*="st-key-mobile_occupation_mode_"] button:focus-visible {
+        outline: 2px solid #d6e3f1 !important;
+        outline-offset: 2px !important;
+    }
+    </style>""")
 
 # V11a visual theme experiment. Local preview only; V10 chart toolbar rules,
 # chart data and widget behavior are deliberately left unchanged.
@@ -926,6 +1028,95 @@ if missing_columns:
 
 
 
+# V17 mobile-only indicator toggles: a single black chart surface with
+# subtly outlined touch targets, centered in a symmetrical 2 x 2 grid.
+# The public st.button(type=...) flag distinguishes enabled/disabled styles;
+# no changes to data, click handlers, desktop labels or Vega/Altair charts.
+if _lme_viewport_mode in ("portrait", "landscape"):
+    st.html("""<style>
+    /* V18: reduce the plot-to-legend spacing by 8px. This adjustment is
+       local to chart cards; Streamlit's other vertical gaps stay intact. */
+    .stMainBlockContainer:has(.st-key-lme_explorer_toolbar)
+    :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+    [class*="st-key-indicator_legend_"] {
+        margin-top: -8px !important;
+    }
+
+    /* Streamlit's four-column layout becomes a true centered 2 x 2 grid,
+       also on phones in landscape orientation. */
+    .stMainBlockContainer:has(.st-key-lme_explorer_toolbar)
+    [class*="st-key-indicator_legend_"] [data-testid="stHorizontalBlock"] {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        column-gap: 8px !important;
+        row-gap: 8px !important;
+    }
+    .stMainBlockContainer:has(.st-key-lme_explorer_toolbar)
+    [class*="st-key-indicator_legend_"] [data-testid="stHorizontalBlock"]
+    > [data-testid="stColumn"] {
+        flex: 0 0 calc(50% - 4px) !important;
+        width: calc(50% - 4px) !important;
+        min-width: 0 !important;
+        max-width: calc(50% - 4px) !important;
+    }
+
+    /* Neither ON nor OFF uses a contrasting button fill. */
+    .stMainBlockContainer:has(.st-key-lme_explorer_toolbar)
+    :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+    [class*="st-key-indicator_button_"] button {
+        width: 100% !important;
+        min-height: 44px !important;
+        padding: 7px 5px !important;
+        background: #0e1117 !important;
+        color: #f5f8fc !important;
+        border: 1px solid #46515e !important;
+        border-radius: 9px !important;
+        box-shadow: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        white-space: nowrap !important;
+    }
+    .stMainBlockContainer:has(.st-key-lme_explorer_toolbar)
+    :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+    [class*="st-key-indicator_button_"] button :is(p, span) {
+        font-size: 0.82rem !important;
+        font-weight: 500 !important;
+        color: #f5f8fc !important;
+        white-space: nowrap !important;
+        text-align: center !important;
+    }
+
+    /* Disabled: same black, softer border, hollow marker, dimmed label. */
+    .stMainBlockContainer:has(.st-key-lme_explorer_toolbar)
+    :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+    [class*="st-key-indicator_button_"] button[data-testid="stBaseButton-secondary"] {
+        border-color: #313a46 !important;
+        color: #8b96a4 !important;
+    }
+    .stMainBlockContainer:has(.st-key-lme_explorer_toolbar)
+    :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+    [class*="st-key-indicator_button_"] button[data-testid="stBaseButton-secondary"] :is(p, span) {
+        color: #8b96a4 !important;
+    }
+
+    /* Preserve subtle interaction feedback without coloring the button. */
+    .stMainBlockContainer:has(.st-key-lme_explorer_toolbar)
+    :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+    [class*="st-key-indicator_button_"] button:hover {
+        border-color: #8796a9 !important;
+        background: #0e1117 !important;
+    }
+    .stMainBlockContainer:has(.st-key-lme_explorer_toolbar)
+    :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+    [class*="st-key-indicator_button_"] button:focus-visible {
+        outline: 2px solid #a6b8ce !important;
+        outline-offset: 2px !important;
+    }
+    </style>""")
+
+
 # Same indicator configuration as the existing charts. The dots and names
 # appear only below the plots; each legend item is also a toggle button.
 INDICATOR_LEGEND = (
@@ -943,6 +1134,7 @@ def render_indicator_legend(chart_container, chart_number: int, group: str = "")
         legend.caption(f"Selection {group}")
 
     legend_columns = legend.columns(4, gap="small")
+    mobile_legend = _lme_viewport_mode in ("portrait", "landscape")
     for column, (label, dot) in zip(legend_columns, INDICATOR_LEGEND):
         state_key = f"indicator_state_{chart_number}_{label}"
         is_selected = st.session_state.get(state_key, label != "Job seekers")
@@ -951,6 +1143,7 @@ def render_indicator_legend(chart_container, chart_number: int, group: str = "")
             button_label,
             key=f"indicator_button_{chart_number}_{label}",
             help=f"{'Hide' if is_selected else 'Show'} {label.lower()}",
+            type="primary" if mobile_legend and is_selected else "secondary",
             width="stretch",
         ):
             st.session_state[state_key] = not is_selected
@@ -972,6 +1165,7 @@ def ensure_overlay_indicators() -> None:
 def render_overlay_indicator_legend(chart_container) -> None:
     legend = chart_container.container(key="indicator_legend_overlay")
     columns = legend.columns(4, gap="small")
+    mobile_legend = _lme_viewport_mode in ("portrait", "landscape")
     for column, (label, dot) in zip(columns, INDICATOR_LEGEND):
         state_key = f"overlay_indicator_{label}"
         enabled = bool(st.session_state.get(state_key, False))
@@ -979,6 +1173,7 @@ def render_overlay_indicator_legend(chart_container) -> None:
             f"{dot}  {label}" if enabled else f"◯  {label}",
             key=f"indicator_button_overlay_{label}",
             help=f"{'Hide' if enabled else 'Show'} {label.lower()} for both occupations",
+            type="primary" if mobile_legend and enabled else "secondary",
             width="stretch",
         ):
             st.session_state[state_key] = not enabled
@@ -1152,38 +1347,69 @@ def render_chart(
     child_rows = get_children(None if selected_code == GERMANY_CODE else selected_code)
     has_children = not child_rows.empty
 
-    # First row: the caption and a stable Back control. Back is disabled at
-    # the root so its appearance/disappearance never shifts the filters.
+    # Mobile: browsing location is separate from the profession being graphed.
+    # This prevents a mode switch from silently changing the chart selection.
+    mobile_picker = _lme_viewport_mode in ("portrait", "landscape")
+    mode_key = f"mobile_occupation_view_{chart_number}"
+    browse_parent_key = f"mobile_occupation_browse_parent_{chart_number}"
+    if mobile_picker:
+        st.session_state.setdefault(mode_key, "search")
+        st.session_state.setdefault(browse_parent_key, GERMANY_CODE)
+    category_mode = mobile_picker and st.session_state[mode_key] == "categories"
+
+    # Keep the classification position in session state for Back navigation;
+    # it does not need a separate breadcrumb row in the compact mobile UI.
+    browse_parent = str(st.session_state.get(browse_parent_key, GERMANY_CODE))
+    if mobile_picker and browse_parent != GERMANY_CODE and get_occupation_row(browse_parent) is None:
+        browse_parent = GERMANY_CODE
+        st.session_state[browse_parent_key] = browse_parent
+
+    # First row: keep the established heading and Back placement.
     heading = controls.container(key=f"occupation_heading_{chart_number}")
     caption_col, back_col = heading.columns(
         [12, 1], gap="small", vertical_alignment="center"
     )
+    # Single-line heading in Search and Categories modes (no breadcrumb row).
+    heading_label = (
+        "Occupation · Subcategories" if category_mode and browse_parent != GERMANY_CODE
+        else "Occupation · Categories" if category_mode
+        else "Occupation:"
+    )
     caption_col.markdown(
-        '<span style="font-size:0.86rem;font-weight:600;">Occupation:</span>',
+        f'<span style="font-size:0.86rem;font-weight:600;">'
+        f'{heading_label}</span>',
         unsafe_allow_html=True,
     )
     if back_col.button(
         "‹ Back",
         key=f"occupation_back_{chart_number}",
         type="tertiary",
-        disabled=selected_code == GERMANY_CODE,
+        disabled=selected_code == GERMANY_CODE and not category_mode,
         width="stretch",
-        help="Go to the parent occupation category",
+        help=("Previous category, or return to Search" if category_mode
+              else "Go to the parent occupation category"),
     ):
-        parent_code = get_parent_code(selected_code)
-        st.session_state[selected_code_key] = (
-            str(parent_code) if parent_code is not None else GERMANY_CODE
-        )
+        if category_mode:
+            nav_parent = st.session_state[browse_parent_key]
+            if nav_parent == GERMANY_CODE:
+                st.session_state[mode_key] = "search"
+            else:
+                parent_code = get_parent_code(nav_parent)
+                new_parent = str(parent_code) if parent_code is not None else GERMANY_CODE
+                st.session_state[browse_parent_key] = new_parent
+                st.session_state[selected_code_key] = new_parent
+        else:
+            parent_code = get_parent_code(selected_code)
+            st.session_state[selected_code_key] = (
+                str(parent_code) if parent_code is not None else GERMANY_CODE
+            )
         st.rerun()
 
-    # Second row: Search / Browse share a single compact row on every screen.
-    # Desktop: use native dropdowns directly (no nested popover + dropdown).
-    # Mobile: retain the compact buttons and existing wider popovers.
-    # Both layouts use the same semantic selected_occupation_code state.
-    mobile_picker = _lme_viewport_mode in ("portrait", "landscape")
+    # Desktop: two independent native dropdowns, unchanged.
+    # Mobile: one shared popover and a 44px Folder Tree mode button.
     pickers = controls.container(key=f"occupation_picker_row_{chart_number}")
     search_col, browse_col = pickers.columns(
-        [3.8, 1.2] if mobile_picker else [1, 1],
+        [5, 1] if mobile_picker else [1, 1],
         gap="small",
         vertical_alignment="center",
     )
@@ -1253,34 +1479,81 @@ def render_chart(
                 width="stretch",
             )
     else:
-        # Keep the tested V13 mobile navigator unchanged.
-        search_picker_key = f"v13_occupation_search_{chart_number}"
+        # V15: mobile displays ONE native Streamlit selectbox in the card.
+        # The tree icon switches its options; there is NO extra popover panel.
+        # Search and Categories intentionally have separate widget identities.
+        # Selected occupation remains shared across both modes and charts.
+        alphabetical_codes = sorted(
+            search_names,
+            key=lambda code: (search_names[code].casefold(), code),
+        )
 
-        def on_search_occupation():
-            picked = st.session_state.get(search_picker_key)
-            if picked is not None:
-                st.session_state[selected_code_key] = str(picked)
-                st.session_state[search_picker_key] = None
+        nav_parent = str(st.session_state[browse_parent_key])
+        nav_label = (
+            GERMANY_LABEL if nav_parent == GERMANY_CODE
+            else search_names.get(nav_parent, nav_parent)
+        )
+        nav_rows = get_children(None if nav_parent == GERMANY_CODE else nav_parent)
+        nav_names = dict(zip(
+            nav_rows["occupation_code"].astype(str),
+            nav_rows["occupation_name"].astype(str),
+        ))
 
         with search_col:
-            with st.popover(
-                f"⌕  {selected_label}",
-                width="stretch",
-                help="Search across all occupation categories",
-            ):
-                st.markdown(
-                    '<span class="lme-v13-occupation-popup-marker"></span>',
-                    unsafe_allow_html=True,
+            if category_mode:
+                category_picker_key = f"v15_mobile_category_{chart_number}_{nav_parent}"
+
+                def on_category_occupation():
+                    picked = st.session_state.get(category_picker_key)
+                    if picked is not None:
+                        st.session_state[selected_code_key] = str(picked)
+                        st.session_state[browse_parent_key] = str(picked)
+
+                if nav_names:
+                    st.selectbox(
+                        "Choose a subcategory",
+                        options=[None] + list(nav_names),
+                        index=0,
+                        format_func=lambda code: (
+                            ("Categories" if nav_parent == GERMANY_CODE
+                             else nav_label) if code is None
+                            else nav_names[code]
+                        ),
+                        key=category_picker_key,
+                        on_change=on_category_occupation,
+                        label_visibility="collapsed",
+                        width="stretch",
+                    )
+                else:
+                    # Native disabled dropdown keeps the single-row layout
+                    # at leaf nodes; Back remains available above.
+                    st.selectbox(
+                        "No further subcategories",
+                        options=[nav_label],
+                        disabled=True,
+                        help="No further subcategories; use Back to go up a level",
+                        key=f"v15_mobile_leaf_{chart_number}_{nav_parent}",
+                        label_visibility="collapsed",
+                        width="stretch",
+                    )
+            else:
+                search_picker_key = (
+                    f"v15_mobile_search_{chart_number}_{selected_code}"
                 )
-                st.caption("Search all occupations")
+
+                def on_search_occupation():
+                    picked = st.session_state.get(search_picker_key)
+                    if picked is not None:
+                        st.session_state[selected_code_key] = str(picked)
+
+                search_options = [GERMANY_CODE] + alphabetical_codes
                 st.selectbox(
-                    "Find an occupation",
-                    options=[None, GERMANY_CODE] + list(search_names),
-                    index=0,
+                    "Search occupations alphabetically",
+                    options=search_options,
+                    index=(search_options.index(selected_code)
+                           if selected_code in search_options else 0),
                     format_func=lambda code: (
-                        "Type to search occupations..." if code is None
-                        else GERMANY_LABEL if code == GERMANY_CODE
-                        else search_names[code]
+                        f"⌕  {GERMANY_LABEL if code == GERMANY_CODE else search_names[code]}"
                     ),
                     key=search_picker_key,
                     on_change=on_search_occupation,
@@ -1288,42 +1561,26 @@ def render_chart(
                     width="stretch",
                 )
 
-        browse_picker_key = f"v13_occupation_browse_{chart_number}"
-
-        def on_browse_occupation():
-            picked = st.session_state.get(browse_picker_key)
-            if picked is not None:
-                st.session_state[selected_code_key] = str(picked)
-                st.session_state[browse_picker_key] = None
-
         with browse_col:
-            with st.popover(
+            if st.button(
                 "Categories",
+                key=f"mobile_occupation_mode_{chart_number}",
+                type="primary" if category_mode else "secondary",
+                help=("Return to alphabetical search" if category_mode
+                      else "Browse occupations by category"),
                 width="stretch",
-                disabled=not has_children,
-                help=(
-                    "Browse the next level of the KldB classification"
-                    if has_children else "No further subcategories; use Back or Search"
-                ),
             ):
-                st.markdown(
-                    '<span class="lme-v13-occupation-popup-marker"></span>',
-                    unsafe_allow_html=True,
-                )
-                st.caption(f"Subcategories of {selected_label}")
-                st.selectbox(
-                    "Choose a subcategory",
-                    options=[None] + list(child_names),
-                    index=0,
-                    format_func=lambda code: (
-                        "Choose a subcategory..." if code is None
-                        else child_names[code]
-                    ),
-                    key=browse_picker_key,
-                    on_change=on_browse_occupation,
-                    label_visibility="collapsed",
-                    width="stretch",
-                )
+                if category_mode:
+                    st.session_state[mode_key] = "search"
+                else:
+                    # Enter near the selected occupation, or at its parent
+                    # when the selected code is a leaf.
+                    candidate = selected_code
+                    if candidate != GERMANY_CODE and get_children(candidate).empty:
+                        candidate = get_parent_code(candidate) or GERMANY_CODE
+                    st.session_state[browse_parent_key] = str(candidate)
+                    st.session_state[mode_key] = "categories"
+                st.rerun()
 
 
     # ---------------------------------------------------------
@@ -1692,12 +1949,29 @@ def render_chart(
     # Reserve room for the native chart toolbar, which sits at the upper right.
     # Truncation affects presentation only: the full occupation name is kept.
     mobile_title = _lme_viewport_mode in ("portrait", "landscape")
-    title_font_size = "17px" if mobile_title else "1.35rem"
+    # Align mobile One headings with the two Overlay line-key labels.
+    # Keep the desktop title styling and text untouched.
+    title_font_size = "15px" if mobile_title else "1.35rem"
     title_max_width = "calc(100% - 108px)" if mobile_title else "100%"
     title_white_space = "nowrap" if mobile_title else "normal"
+    # V18 mobile: move 8px of visual breathing room from under the plot
+    # to between the heading/Fullscreen row and the plot.
+    title_bottom_gap = "16px" if mobile_title else "0.25rem"
     title_overflow = "hidden" if mobile_title else "visible"
     title_ellipsis = "ellipsis" if mobile_title else "clip"
-    safe_display_name = html.escape(str(display_name), quote=True)
+    # The selected qualification materially changes the chart data. Show it
+    # in mobile One as we already do in Overlay; do not alter desktop titles.
+    if mobile_title and qualification_label:
+        short_qualification = {
+            "Overall": "All",
+            "Helpers": "Helper",
+            "Specialists": "Specialist",
+            "Experts": "Expert",
+        }.get(qualification_label, qualification_label)
+        displayed_title = f"{display_name} · {short_qualification}"
+    else:
+        displayed_title = display_name
+    safe_display_name = html.escape(str(displayed_title), quote=True)
     chart_card.markdown(
         f"""
         <div style="
@@ -1705,7 +1979,7 @@ def render_chart(
             align-items: baseline;
             gap: 0.7rem;
             margin-top: 0.15rem;
-            margin-bottom: 0.25rem;
+            margin-bottom: {title_bottom_gap};
             min-width: 0;
         ">
             <span title="{safe_display_name}" style="
@@ -1813,15 +2087,89 @@ st.html("""<style>
 </style>""")
 
 
+# V14.2 mobile-only trial: 8px card spacing with the dark chart area.
+# Keep the Occupation controls slate, use the existing phone chart colour for
+# the title, plot surround and indicator legend. Overlay already is its own
+# chart card; in One, only the chart *portion* of the analysis card changes.
+# No chart logic, Vega spec, desktop CSS or desktop layout is modified.
+st.html("""<style>
+@media (max-width: 600px) and (max-height: 1000px),
+       (max-height: 600px) and (max-width: 1000px) {
+    /* Pull the first Occupation card closer to the one-line toolbar. */
+    .st-key-lme_explorer_toolbar {
+        padding-bottom: 0 !important;
+        margin-bottom: -0.5rem !important;
+    }
+
+    /* Single view: controls and chart share one slate analysis card.
+       Recolour ONLY the child chart section, including its indicator legend. */
+    .stMainBlockContainer:has(.st-key-lme_explorer_toolbar)
+    :is(.st-key-analysis_a .st-key-chart_a,
+        .st-key-analysis_b .st-key-chart_b) {
+        background: #0e1117 !important;
+        border-top: 0 !important;
+        border-radius: 12px !important;
+        /* Existing Streamlit vertical gap is about 16px; move the inset
+           chart up 8px so the visible controls-to-chart gap is about 8px. */
+        margin-top: -8px !important;
+        padding: 9px 4px 10px !important;
+    }
+
+    /* V16: mobile One gets independent Occupation and Chart cards, like
+       Overlay. The page already has 8px side margins; the chart card uses
+       the same internal horizontal padding and slate-black palette. */
+    .st-key-lme_mobile_one_chart_workspace {
+        margin-top: -8px !important;
+    }
+    .stMainBlockContainer:has(.st-key-lme_explorer_toolbar)
+    .st-key-lme_mobile_one_chart_workspace .st-key-chart_a {
+        background: #0e1117 !important;
+        color: var(--lme-preview-foreground) !important;
+        border-radius: 14px !important;
+        box-shadow: var(--lme-preview-shadow) !important;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+    .stMainBlockContainer:has(.st-key-lme_explorer_toolbar)
+    .st-key-lme_mobile_one_chart_workspace
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.st-key-chart_a) {
+        background: #0e1117 !important;
+        border-color: #35404e !important;
+        border-radius: 14px !important;
+    }
+
+    /* Overlay: occupation A/B columns stack on phones. Tighten that gap
+       and the gap from Occupation B to the separate plot card to ~8px. */
+    [data-testid="stHorizontalBlock"]:has(.st-key-controls_a):has(.st-key-controls_b) {
+        gap: 8px !important;
+    }
+    .st-key-lme_overlay_chart_workspace {
+        margin-top: -8px !important;
+    }
+
+    /* Overlay view: its own chart card contains both line keys and legend. */
+    .stMainBlockContainer:has(.st-key-lme_explorer_toolbar)
+    .st-key-combined_chart {
+        background: #0e1117 !important;
+    }
+    .stMainBlockContainer:has(.st-key-lme_explorer_toolbar)
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.st-key-combined_chart) {
+        background: #0e1117 !important;
+        border-color: #35404e !important;
+    }
+}
+</style>""")
+
+
 # Mobile Overlay: preserve full labels while making the two line keys compact.
 # Desktop positioning and the native chart toolbar remain unchanged.
 st.html("""<style>
 @media (max-width: 768px) {
     .st-key-combined_chart .lme-overlay-line-keys {
-        /* Reserve room for the always-visible Fullscreen button. */
+        /* Keep ellipsis on two lines; give 8px more room below labels. */
         padding-right: 38px !important;
         gap: 6px !important;
-        margin-bottom: 7px !important;
+        margin-bottom: 16px !important;
     }
     .st-key-combined_chart .lme-overlay-line-keys > div {
         gap: 7px !important;
@@ -1831,7 +2179,7 @@ st.html("""<style>
         width: 28px !important;
     }
     .st-key-combined_chart .lme-overlay-line-keys > div > span:last-child {
-        font-size: 12.5px !important;
+        font-size: 15px !important;
         line-height: 1.25 !important;
         flex: 1 1 auto !important;
         min-width: 0 !important;
@@ -1998,8 +2346,12 @@ if layout_mode == "Compare":
     render_chart(2, controls_b, chart_b)
 elif layout_mode == "Combined":
     # Keep the same full-width two-column controls layout as Two.
-    # Center only the combined plot card on desktop; retain mobile width.
-    controls_a_col, controls_b_col = st.columns([1, 1], gap="medium")
+    # On phones, reduce only the space between the two occupation cards.
+    # Desktop keeps the established medium gap.
+    mobile_overlay = _lme_viewport_mode in ("portrait", "landscape")
+    controls_a_col, controls_b_col = st.columns(
+        [1, 1], gap="small" if mobile_overlay else "medium"
+    )
     with controls_a_col:
         controls_a = st.container(border=True, key="controls_a")
     with controls_b_col:
@@ -2017,6 +2369,14 @@ elif layout_mode == "Combined":
                              indicator_override=overlay_selection)
     render_combined_chart(payload_a, payload_b, combined_chart)
 else:
-    single_workspace = st.container(key="lme_single_workspace")
-    controls_a, chart_a = make_analysis_card(single_workspace, "a")
+    # V16 mobile One: same separate control / chart cards as Overlay.
+    # Keep the original combined analysis card unchanged on desktop.
+    mobile_one = _lme_viewport_mode in ("portrait", "landscape")
+    if mobile_one:
+        controls_a = st.container(border=True, key="controls_a")
+        chart_workspace = st.container(key="lme_mobile_one_chart_workspace")
+        chart_a = chart_workspace.container(border=True, key="chart_a")
+    else:
+        single_workspace = st.container(key="lme_single_workspace")
+        controls_a, chart_a = make_analysis_card(single_workspace, "a")
     render_chart(1, controls_a, chart_a)

@@ -126,19 +126,28 @@ export default function({ data, setStateValue }) {
 }
 """
 
+# Preserve the last browser-confirmed screen class across Streamlit reruns.
+# A v2 component may briefly return its default again when Abs/Idx changes.
+# A hard-coded "desktop" default caused a phone to temporarily receive desktop
+# chart height, desktop toolbars, and Vega pan/zoom on the same rerun.
+_VALID_VIEWPORT_MODES = ("portrait", "landscape", "desktop")
+_previous_viewport_mode = st.session_state.get("lme_last_viewport_mode", "desktop")
+if _previous_viewport_mode not in _VALID_VIEWPORT_MODES:
+    _previous_viewport_mode = "desktop"
+
 _lme_viewport_component = st.components.v2.component(
     "lme_explorer_viewport_v12_2", js=_LME_VIEWPORT_JS
 )
 _lme_viewport_result = _lme_viewport_component(
     key="lme_explorer_viewport_v12_2",
-    data={"previousMode": st.session_state.get("lme_last_viewport_mode", "desktop")},
-    default={"mode": "desktop"},
+    data={"previousMode": _previous_viewport_mode},
+    default={"mode": _previous_viewport_mode},
     on_mode_change=lambda: None,
     height=0,
 )
 _lme_viewport_mode = _lme_viewport_result.mode
-if _lme_viewport_mode not in ("portrait", "landscape", "desktop"):
-    _lme_viewport_mode = "desktop"
+if _lme_viewport_mode not in _VALID_VIEWPORT_MODES:
+    _lme_viewport_mode = _previous_viewport_mode
 st.session_state["lme_last_viewport_mode"] = _lme_viewport_mode
 CHART_HEIGHT = {"portrait": 260, "landscape": 200, "desktop": 380}[_lme_viewport_mode]
 # V12.6: on phone-sized screens, keep charts readable and tooltip-enabled
@@ -1964,11 +1973,8 @@ def render_chart(
             * 100
         )
 
-    y_axis_title = (
-        tr("Index (start = 100)", DISPLAY_LANGUAGE)
-        if view_mode == "Indexed"
-        else None
-    )
+    # The mode selector explains the index. Do not repeat it beside the y-axis.
+    y_axis_title = None
 
     display_name = (
         GERMANY_LABEL
@@ -2298,7 +2304,7 @@ def render_combined_chart(payload_a, payload_b, chart_container) -> None:
             x=alt.X("report_date:T", title=None),
             y=alt.Y(
                 "value:Q",
-                title=tr("Index (start = 100)", DISPLAY_LANGUAGE) if view_mode == "Indexed" else None,
+                title=None,  # Abs/Idx explanation belongs in the top mode selector.
                 axis=alt.Axis(
                     format=",.0f" if view_mode == "Indexed" else "~s",
                 ),

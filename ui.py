@@ -780,43 +780,136 @@ def _explorer_header_style() -> str:
           white-space: pre;
       }
 
-      /* Two robust icon-only native buttons for data view. The SVG sits on
-         the button itself, so it is independent of Streamlit's text DOM. */
-      .st-key-lme_explorer_toolbar .st-key-lme_view_absolute button,
-      .st-key-lme_explorer_toolbar .st-key-lme_view_indexed button {
+      /* One compact control for chart scale. Its label is the ACTIVE mode.
+         Keep the trigger within the existing toolbar column on every screen. */
+      .st-key-lme_explorer_toolbar .st-key-lme_view_mode [data-testid="stPopover"] button {
           height: 38px !important;
           min-height: 38px !important;
-          min-width: 42px !important;
-          padding: 0 !important;
+          width: 100% !important;
+          min-width: 0 !important;
+          padding: 0 0.45rem !important;
           border: 0 !important;
           border-radius: 7px !important;
           box-shadow: none !important;
+          background: #e9ebef !important;
+          color: var(--lme-text) !important;
+          font-size: 0.86rem !important;
+          font-weight: 700 !important;
+          white-space: nowrap !important;
+      }
+      .st-key-lme_explorer_toolbar .st-key-lme_view_mode [data-testid="stPopover"] button:hover {
+          background: #dee2e8 !important;
+      }
+      .st-key-lme_explorer_toolbar .st-key-lme_view_mode [data-testid="stPopover"] button:focus-visible {
+          outline: 2px solid #8093aa !important;
+          outline-offset: 2px !important;
+      }
+      /* Abs/Idx popup: visually belongs to the LIGHT toolbar, rather than
+         inheriting the Explorer's dark occupation-dropdown styling.
+         :has(marker) scopes the rule to this popover even though Streamlit
+         renders its body in a portal outside the toolbar. */
+      body:has(.st-key-lme_explorer_toolbar)
+      [data-testid="stPopoverBody"]:has(.lme-mode-popover-marker) {
+          background: #e3e6eb !important;
+          color: #171717 !important;
+          border: 1px solid #cbd2db !important;
+          border-radius: 12px !important;
+          box-shadow: 0 8px 24px rgba(25, 35, 48, .13) !important;
+          padding: 0.35rem !important;
+          width: min(300px, calc(100vw - 24px)) !important;
+          max-width: calc(100vw - 24px) !important;
+      }
+      /* Desktop can fit the two short options in a narrower popup. */
+      @media (min-width: 769px) {
+          body:has(.st-key-lme_explorer_toolbar)
+          [data-testid="stPopoverBody"]:has(.lme-mode-popover-marker) {
+              width: 280px !important;
+          }
+      }
+      /* Streamlit renders this popup in a BaseWeb portal. The outer portal
+         and the nested divs must also be reset: app.py styles occupation
+         popovers dark and would otherwise create a black surround. */
+      body:has(.st-key-lme_explorer_toolbar)
+      [data-baseweb="popover"]:has(.lme-mode-popover-marker) {
+          background: #e3e6eb !important;
+          border-radius: 12px !important;
+      }
+      /* The occupation dropdown has global dark BaseWeb portal rules in
+         app.py. Reset the *nested portal wrappers*, without touching the
+         light body itself. Otherwise dark blocks can remain on mobile. */
+      body:has(.st-key-lme_explorer_toolbar)
+      [data-baseweb="popover"]:has(.lme-mode-popover-marker)
+      :is(div, ul, li, p, span, label):not([data-testid="stPopoverBody"]) {
           background-color: transparent !important;
-          background-repeat: no-repeat !important;
-          background-position: center !important;
-          background-size: 21px 21px !important;
-          /* Keep the button's accessible text while removing it visually. */
-          font-size: 0 !important;
-          line-height: 0 !important;
+          color: #171717 !important;
       }
-      .st-key-lme_explorer_toolbar .st-key-lme_view_absolute button *,
-      .st-key-lme_explorer_toolbar .st-key-lme_view_indexed button * {
-          font-size: 0 !important;
-          line-height: 0 !important;
+      /* No empty marker row or Streamlit's default generous vertical gap. */
+      body:has(.st-key-lme_explorer_toolbar)
+      [data-testid="stPopoverBody"]:has(.lme-mode-popover-marker)
+      [data-testid="stElementContainer"]:has(.lme-mode-popover-marker) {
+          display: none !important;
       }
-      .st-key-lme_explorer_toolbar .st-key-lme_view_absolute button {
-          background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMxNzE3MTciIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNNiAyMHYtN00xMiAyMFY1TTE4IDIwdi0xMSIvPjwvc3ZnPg==") !important;
+      body:has(.st-key-lme_explorer_toolbar)
+      [data-testid="stPopoverBody"]:has(.lme-mode-popover-marker)
+      [data-testid="stVerticalBlock"] {
+          gap: 0.25rem !important;
       }
-      .st-key-lme_explorer_toolbar .st-key-lme_view_indexed button {
-          background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMxNzE3MTciIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48bGluZSB4MT0iMTkiIHkxPSI1IiB4Mj0iNSIgeTI9IjE5Ii8+PGNpcmNsZSBjeD0iNi41IiBjeT0iNi41IiByPSIyLjI1Ii8+PGNpcmNsZSBjeD0iMTcuNSIgY3k9IjE3LjUiIHI9IjIuMjUiLz48L3N2Zz4=") !important;
+      body:has(.st-key-lme_explorer_toolbar)
+      [data-testid="stPopoverBody"]:has(.lme-mode-popover-marker)
+      :is(div, ul, li, p, span, label) {
+          color: #171717 !important;
+          background-color: transparent !important;
       }
-      .st-key-lme_explorer_toolbar .st-key-lme_view_absolute button:hover,
-      .st-key-lme_explorer_toolbar .st-key-lme_view_indexed button:hover {
-          background-color: #f0f1f3 !important;
+      body:has(.st-key-lme_explorer_toolbar)
+      [data-testid="stPopoverBody"]:has(.lme-mode-popover-marker)
+      :is([data-testid="stVerticalBlock"], [data-testid="stElementContainer"],
+          [data-testid="stButton"], [data-testid="stMarkdownContainer"]) {
+          background: transparent !important;
+          border: 0 !important;
+          box-shadow: none !important;
       }
-      .st-key-lme_explorer_toolbar .st-key-lme_view_buttons div[data-testid="stHorizontalBlock"] {
-          align-items: center !important;
-          gap: 0.15rem !important;
+      body:has(.st-key-lme_explorer_toolbar)
+      [data-testid="stPopoverBody"]:has(.lme-mode-popover-marker)
+      [class*="st-key-lme_mode_select_"] button {
+          background: transparent !important;
+          color: #171717 !important;
+          border: 1px solid transparent !important;
+          box-shadow: none !important;
+          border-radius: 8px !important;
+          padding: 0.32rem 0.55rem !important;
+          min-height: 34px !important;
+          font-weight: 500 !important;
+          font-size: 0.85rem !important;
+          justify-content: flex-start !important;
+          text-align: left !important;
+          white-space: normal !important;
+      }
+      body:has(.st-key-lme_explorer_toolbar)
+      [data-testid="stPopoverBody"]:has(.lme-mode-popover-marker)
+      [class*="st-key-lme_mode_select_"] button :is(p, span) {
+          color: #171717 !important;
+          background: transparent !important;
+          font-family: inherit !important;
+          font-size: inherit !important;
+          font-weight: inherit !important;
+          white-space: normal !important;
+      }
+      body:has(.st-key-lme_explorer_toolbar)
+      [data-testid="stPopoverBody"]:has(.lme-mode-popover-marker)
+      [class*="st-key-lme_mode_select_"] button:hover {
+          background: #d4dbe5 !important;
+      }
+      body:has(.st-key-lme_explorer_toolbar)
+      [data-testid="stPopoverBody"]:has(.lme-mode-popover-marker)
+      [class*="st-key-lme_mode_select_"] button:focus-visible {
+          outline: 2px solid #8093aa !important;
+          outline-offset: 1px !important;
+      }
+      body:has(.st-key-lme_explorer_toolbar)
+      [data-testid="stPopoverBody"]:has(.lme-mode-popover-marker)
+      [class*="st-key-lme_mode_select_"] button[data-testid="stBaseButton-primary"] {
+          background: #d4dbe5 !important;
+          font-weight: 700 !important;
       }
       /* Chart layout keeps its existing textual segmented control. */
       .st-key-lme_explorer_toolbar .st-key-chart_layout button[data-variant="segmented_control"] {
@@ -906,17 +999,6 @@ def _explorer_header_style() -> str:
               font-size: 0.83rem !important;
               padding: 0.32rem 0.42rem !important;
           }
-          /* Do not turn the two icon buttons into a twelve-column grid. */
-          .st-key-lme_explorer_toolbar .st-key-lme_view_buttons div[data-testid="stHorizontalBlock"] {
-              display: flex !important;
-              gap: 0.2rem !important;
-          }
-          .st-key-lme_explorer_toolbar .st-key-lme_view_buttons div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
-              flex: 1 1 0 !important;
-              width: 50% !important;
-              min-width: 0 !important;
-              max-width: 50% !important;
-          }
           .st-key-lme_explorer_toolbar {
               padding-bottom: 0.5rem;
               margin-bottom: 0.55rem;
@@ -930,9 +1012,9 @@ def _explorer_header_style() -> str:
       }
       @media (max-width: 600px) and (max-height: 1000px),
              (max-height: 600px) and (max-width: 1000px) {
-          /* Four visible slots: Home / languages / 2 modes / comparison. */
+          /* Four visible slots: Home / languages / mode / comparison. */
           .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] {
-              grid-template-columns: 58px minmax(0, 1fr) 91px 42px !important;
+              grid-template-columns: 58px minmax(0, 1fr) 76px 42px !important;
               gap: 0.15rem !important;
               align-items: center !important;
           }
@@ -986,11 +1068,6 @@ def _explorer_header_style() -> str:
           .st-key-lme_explorer_toolbar .st-key-lme_mobile_compare button:hover {
               background-color: #f0f1f3 !important;
           }
-          /* The nested icon pair retains its horizontal layout. */
-          .st-key-lme_explorer_toolbar .st-key-lme_view_buttons div[data-testid="stHorizontalBlock"] {
-              display: flex !important;
-              gap: 0.15rem !important;
-          }
           .st-key-lme_explorer_toolbar {
               padding-bottom: 0.35rem;
               margin-bottom: 0.45rem;
@@ -1033,17 +1110,6 @@ def _render_explorer_header():
         "Combined": tr("Overlay", language),
     }
 
-    # Current data view is indicated by a quiet gray background.
-    selected_view_button = (
-        "lme_view_absolute"
-        if st.session_state.global_view_mode == "Absolute"
-        else "lme_view_indexed"
-    )
-    st.markdown(
-        f'<style>.st-key-lme_explorer_toolbar .st-key-{selected_view_button} '
-        'button { background-color: #e9ebef !important; }</style>',
-        unsafe_allow_html=True,
-    )
     if st.session_state.chart_layout == "Combined":
         st.markdown(
             '<style>.st-key-lme_explorer_toolbar .st-key-lme_mobile_compare '
@@ -1082,30 +1148,40 @@ def _render_explorer_header():
             )
 
         with view_col:
-            # Use separate stable button keys rather than injecting icons into
-            # Streamlit's internal segmented-control markup.
-            with st.container(key="lme_view_buttons"):
-                absolute_col, indexed_col = st.columns(2, gap="small")
-                with absolute_col:
-                    if st.button(
-                        tr("Absolute values", language),
-                        key="lme_view_absolute",
-                        help=tr("Absolute values", language),
-                        type="tertiary",
-                        width="stretch",
-                    ):
-                        st.session_state.global_view_mode = "Absolute"
-                        st.rerun()
-                with indexed_col:
-                    if st.button(
-                        tr("Indexed (start = 100)", language),
-                        key="lme_view_indexed",
-                        help=tr("Indexed (start = 100), not percentages", language),
-                        type="tertiary",
-                        width="stretch",
-                    ):
-                        st.session_state.global_view_mode = "Indexed"
-                        st.rerun()
+            # This is a mode SELECTOR, not an action button. The closed label
+            # always names the active mode, regardless of the chosen language.
+            # Keep global_view_mode unchanged: app.py expects Absolute|Indexed.
+            view_modes = {
+                "Absolute": ("Abs", tr("Absolute values", language)),
+                "Indexed": ("Idx", tr("Indexed (start = 100)", language)),
+            }
+            current_mode = st.session_state.global_view_mode
+            current_short, current_description = view_modes[current_mode]
+            with st.container(key="lme_view_mode"):
+                with st.popover(
+                    current_short,
+                    help=current_description,
+                    width="stretch",
+                ):
+                    st.html('<span class="lme-mode-popover-marker" aria-hidden="true"></span>')
+                    for mode, (short_label, description) in view_modes.items():
+                        is_current = mode == current_mode
+                        # Four leading ASCII spaces were interpreted as an
+                        # indented Markdown code block by st.button, creating
+                        # the black box and monospaced text on mobile.
+                        option_label = (
+                            f"{'✓ ' if is_current else ''}"
+                            f"{short_label} · {description}"
+                        )
+                        if st.button(
+                            option_label,
+                            key=f"lme_mode_select_{mode.lower()}",
+                            type="primary" if is_current else "tertiary",
+                            width="stretch",
+                        ):
+                            if not is_current:
+                                st.session_state.global_view_mode = mode
+                                st.rerun()
 
         with divider_col:
             st.markdown(

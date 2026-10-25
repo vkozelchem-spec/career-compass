@@ -2,6 +2,8 @@ from pathlib import Path
 import html
 from ui import apply_app_style, render_header
 from lme_welcome import render_welcome
+from kldb_localization import load_kldb_labels, occupation_label
+from lme_i18n import tr, QUALIFICATION_DISPLAY, QUALIFICATION_TABS, QUALIFICATION_MOBILE_TABS, QUALIFICATION_SHORT
 
 import pandas as pd
 import streamlit as st
@@ -11,6 +13,7 @@ DATA_DIR = Path(__file__).parent / "data"
 
 LABOUR_MARKET_DATA_PATH = DATA_DIR / "german_labour_market_full.parquet"
 EMPLOYED_PEOPLE_DATA_PATH = DATA_DIR / "employed_people_full_kldb.parquet"
+KLDB_DATA_PATH = DATA_DIR / "kldb_2020_de_en_official.csv"
 
 
 @st.cache_data
@@ -1026,6 +1029,19 @@ if missing_columns:
     )
     st.stop()
 
+# Official KldB translations are display-only. The original Parquet values
+# remain untouched, because occupation_name is used in chart filtering.
+if not KLDB_DATA_PATH.exists():
+    st.error(f"Occupation translation file not found: {KLDB_DATA_PATH}")
+    st.stop()
+
+try:
+    KLDB_LABELS = load_kldb_labels(KLDB_DATA_PATH)
+except (OSError, ValueError) as exc:
+    st.error(f"Could not load occupation translations: {exc}")
+    st.stop()
+
+DISPLAY_LANGUAGE = st.session_state.get("lme_language", "En")
 
 
 # V17 mobile-only indicator toggles: a single black chart surface with
@@ -1131,18 +1147,20 @@ def render_indicator_legend(chart_container, chart_number: int, group: str = "")
     """Interactive four-item legend below a chart (or A/B legends in Overlay)."""
     legend = chart_container.container(key=f"indicator_legend_{chart_number}")
     if group:
-        legend.caption(f"Selection {group}")
+        legend.caption(f"{tr('Selection', DISPLAY_LANGUAGE)} {group}")
 
     legend_columns = legend.columns(4, gap="small")
     mobile_legend = _lme_viewport_mode in ("portrait", "landscape")
     for column, (label, dot) in zip(legend_columns, INDICATOR_LEGEND):
         state_key = f"indicator_state_{chart_number}_{label}"
         is_selected = st.session_state.get(state_key, label != "Job seekers")
-        button_label = f"{dot}  {label}" if is_selected else f"◯  {label}"
+        visible_label = tr(label, DISPLAY_LANGUAGE)
+        button_label = f"{dot}  {visible_label}" if is_selected else f"◯  {visible_label}"
         if column.button(
             button_label,
             key=f"indicator_button_{chart_number}_{label}",
-            help=f"{'Hide' if is_selected else 'Show'} {label.lower()}",
+            help=(f"{tr('Hide', DISPLAY_LANGUAGE) if is_selected else tr('Show', DISPLAY_LANGUAGE)} "
+                  f"{visible_label}"),
             type="primary" if mobile_legend and is_selected else "secondary",
             width="stretch",
         ):
@@ -1169,10 +1187,12 @@ def render_overlay_indicator_legend(chart_container) -> None:
     for column, (label, dot) in zip(columns, INDICATOR_LEGEND):
         state_key = f"overlay_indicator_{label}"
         enabled = bool(st.session_state.get(state_key, False))
+        visible_label = tr(label, DISPLAY_LANGUAGE)
         if column.button(
-            f"{dot}  {label}" if enabled else f"◯  {label}",
+            f"{dot}  {visible_label}" if enabled else f"◯  {visible_label}",
             key=f"indicator_button_overlay_{label}",
-            help=f"{'Hide' if enabled else 'Show'} {label.lower()} for both occupations",
+            help=(f"{tr('Hide', DISPLAY_LANGUAGE) if enabled else tr('Show', DISPLAY_LANGUAGE)} "
+                  f"{visible_label} · {tr('for both occupations', DISPLAY_LANGUAGE)}"),
             type="primary" if mobile_legend and enabled else "secondary",
             width="stretch",
         ):
@@ -1214,7 +1234,10 @@ def render_chart(
     )
 
     GERMANY_CODE = "DE"
-    GERMANY_LABEL = "All occupations"
+    GERMANY_LABEL = tr("All occupations", DISPLAY_LANGUAGE)
+    # Use a real string, not None, as the dropdown's prompt value. Streamlit
+    # treats a None option as no selection and displays "Choose an option".
+    CATEGORY_PROMPT = "__lme_category_prompt__"
 
 
     # ---------------------------------------------------------
@@ -1333,16 +1356,29 @@ def render_chart(
     # Each analysis (A/B) has its own widget keys and selection state.
 
     selected_code = str(st.session_state[selected_code_key])
-    search_names = dict(
+    # Display names are keyed only by stable KldB codes; in particular, no
+    # translated string is ever used as a filter on the German Parquet data.
+    source_names = dict(
         zip(
             occupations["occupation_code"].astype(str),
             occupations["occupation_name"].astype(str),
         )
     )
+    search_names = {
+        code: occupation_label(code, DISPLAY_LANGUAGE, source_name, KLDB_LABELS, compact=True)
+        for code, source_name in source_names.items()
+    }
+    # Streamlit can keep an obsolete selectbox state across language changes,
+    # navigation, or a previous app version. Never let an unknown option become
+    # the semantic chart selection (which would crash on selected_row below).
+    # A valid KldB code is stable across locales; only its label changes.
+    if selected_code != GERMANY_CODE and selected_code not in search_names:
+        selected_code = GERMANY_CODE
+        st.session_state[selected_code_key] = GERMANY_CODE
     selected_label = (
         GERMANY_LABEL
         if selected_code == GERMANY_CODE
-        else search_names.get(selected_code, selected_code)
+        else search_names[selected_code]
     )
     child_rows = get_children(None if selected_code == GERMANY_CODE else selected_code)
     has_children = not child_rows.empty
@@ -1370,10 +1406,10 @@ def render_chart(
         [12, 1], gap="small", vertical_alignment="center"
     )
     # Single-line heading in Search and Categories modes (no breadcrumb row).
-    heading_label = (
+    heading_label = tr(
         "Occupation · Subcategories" if category_mode and browse_parent != GERMANY_CODE
         else "Occupation · Categories" if category_mode
-        else "Occupation:"
+        else "Occupation:", DISPLAY_LANGUAGE,
     )
     caption_col.markdown(
         f'<span style="font-size:0.86rem;font-weight:600;">'
@@ -1381,13 +1417,13 @@ def render_chart(
         unsafe_allow_html=True,
     )
     if back_col.button(
-        "‹ Back",
+        tr("‹ Back", DISPLAY_LANGUAGE),
         key=f"occupation_back_{chart_number}",
         type="tertiary",
         disabled=selected_code == GERMANY_CODE and not category_mode,
         width="stretch",
-        help=("Previous category, or return to Search" if category_mode
-              else "Go to the parent occupation category"),
+        help=tr("Previous category, or return to Search" if category_mode
+                else "Go to the parent occupation category", DISPLAY_LANGUAGE),
     ):
         if category_mode:
             nav_parent = st.session_state[browse_parent_key]
@@ -1414,12 +1450,14 @@ def render_chart(
         vertical_alignment="center",
     )
 
-    child_names = dict(
-        zip(
-            child_rows["occupation_code"].astype(str),
-            child_rows["occupation_name"].astype(str),
+    # Browse must use the same localized names as alphabetical Search.
+    # Never change the codes used by navigation or chart filtering.
+    child_names = {
+        str(code): search_names.get(str(code), str(source_name))
+        for code, source_name in zip(
+            child_rows["occupation_code"], child_rows["occupation_name"]
         )
-    )
+    }
 
     if not mobile_picker:
         # Show the *actual selection*, rather than a transient Search prompt.
@@ -1427,17 +1465,17 @@ def render_chart(
         # displayed value without trying to mutate an existing widget key.
         search_options = [GERMANY_CODE] + list(search_names)
         desktop_search_key = (
-            f"v13_desktop_occupation_search_{chart_number}_{selected_code}"
+            f"v13_desktop_occupation_search_{chart_number}_{selected_code}_{DISPLAY_LANGUAGE}"
         )
 
         def on_desktop_search():
             picked = st.session_state.get(desktop_search_key)
-            if picked is not None:
+            if picked == GERMANY_CODE or picked in search_names:
                 st.session_state[selected_code_key] = str(picked)
 
         with search_col:
             st.selectbox(
-                "Search occupations",
+                tr("Search occupations", DISPLAY_LANGUAGE),
                 options=search_options,
                 index=(
                     search_options.index(selected_code)
@@ -1454,22 +1492,22 @@ def render_chart(
             )
 
         desktop_browse_key = (
-            f"v13_desktop_occupation_browse_{chart_number}_{selected_code}"
+            f"v13_desktop_occupation_browse_{chart_number}_{selected_code}_{DISPLAY_LANGUAGE}"
         )
 
         def on_desktop_browse():
             picked = st.session_state.get(desktop_browse_key)
-            if picked is not None:
+            if picked in child_names:
                 st.session_state[selected_code_key] = str(picked)
 
         with browse_col:
             st.selectbox(
-                "Categories",
-                options=[None] + list(child_names),
+                tr("Categories", DISPLAY_LANGUAGE),
+                options=[CATEGORY_PROMPT] + list(child_names),
                 index=0,
                 format_func=lambda code: (
-                    "Categories" if code is None and has_children
-                    else "No further categories" if code is None
+                    tr("Categories", DISPLAY_LANGUAGE) if code == CATEGORY_PROMPT and has_children
+                    else tr("No further categories", DISPLAY_LANGUAGE) if code == CATEGORY_PROMPT
                     else child_names[code]
                 ),
                 key=desktop_browse_key,
@@ -1494,29 +1532,33 @@ def render_chart(
             else search_names.get(nav_parent, nav_parent)
         )
         nav_rows = get_children(None if nav_parent == GERMANY_CODE else nav_parent)
-        nav_names = dict(zip(
-            nav_rows["occupation_code"].astype(str),
-            nav_rows["occupation_name"].astype(str),
-        ))
+        nav_names = {
+            str(code): search_names.get(str(code), str(source_name))
+            for code, source_name in zip(
+                nav_rows["occupation_code"], nav_rows["occupation_name"]
+            )
+        }
 
         with search_col:
             if category_mode:
-                category_picker_key = f"v15_mobile_category_{chart_number}_{nav_parent}"
+                category_picker_key = (
+                    f"v15_mobile_category_{chart_number}_{nav_parent}_{DISPLAY_LANGUAGE}"
+                )
 
                 def on_category_occupation():
                     picked = st.session_state.get(category_picker_key)
-                    if picked is not None:
+                    if picked in nav_names:
                         st.session_state[selected_code_key] = str(picked)
                         st.session_state[browse_parent_key] = str(picked)
 
                 if nav_names:
                     st.selectbox(
-                        "Choose a subcategory",
-                        options=[None] + list(nav_names),
+                        tr("Choose a subcategory", DISPLAY_LANGUAGE),
+                        options=[CATEGORY_PROMPT] + list(nav_names),
                         index=0,
                         format_func=lambda code: (
-                            ("Categories" if nav_parent == GERMANY_CODE
-                             else nav_label) if code is None
+                            (tr("Categories", DISPLAY_LANGUAGE) if nav_parent == GERMANY_CODE
+                             else nav_label) if code == CATEGORY_PROMPT
                             else nav_names[code]
                         ),
                         key=category_picker_key,
@@ -1528,27 +1570,27 @@ def render_chart(
                     # Native disabled dropdown keeps the single-row layout
                     # at leaf nodes; Back remains available above.
                     st.selectbox(
-                        "No further subcategories",
+                        tr("No further subcategories", DISPLAY_LANGUAGE),
                         options=[nav_label],
                         disabled=True,
-                        help="No further subcategories; use Back to go up a level",
-                        key=f"v15_mobile_leaf_{chart_number}_{nav_parent}",
+                        help=tr("No further subcategories; use Back to go up a level", DISPLAY_LANGUAGE),
+                        key=f"v15_mobile_leaf_{chart_number}_{nav_parent}_{DISPLAY_LANGUAGE}",
                         label_visibility="collapsed",
                         width="stretch",
                     )
             else:
                 search_picker_key = (
-                    f"v15_mobile_search_{chart_number}_{selected_code}"
+                    f"v15_mobile_search_{chart_number}_{selected_code}_{DISPLAY_LANGUAGE}"
                 )
 
                 def on_search_occupation():
                     picked = st.session_state.get(search_picker_key)
-                    if picked is not None:
+                    if picked == GERMANY_CODE or picked in search_names:
                         st.session_state[selected_code_key] = str(picked)
 
                 search_options = [GERMANY_CODE] + alphabetical_codes
                 st.selectbox(
-                    "Search occupations alphabetically",
+                    tr("Search occupations alphabetically", DISPLAY_LANGUAGE),
                     options=search_options,
                     index=(search_options.index(selected_code)
                            if selected_code in search_options else 0),
@@ -1563,11 +1605,11 @@ def render_chart(
 
         with browse_col:
             if st.button(
-                "Categories",
+                tr("Categories", DISPLAY_LANGUAGE),
                 key=f"mobile_occupation_mode_{chart_number}",
                 type="primary" if category_mode else "secondary",
-                help=("Return to alphabetical search" if category_mode
-                      else "Browse occupations by category"),
+                help=tr("Return to alphabetical search" if category_mode
+                        else "Browse occupations by category", DISPLAY_LANGUAGE),
                 width="stretch",
             ):
                 if category_mode:
@@ -1587,7 +1629,12 @@ def render_chart(
     # Resolve selected occupation for the existing chart code
     # ---------------------------------------------------------
 
-    selected_code = st.session_state[selected_code_key]
+    selected_code = str(st.session_state.get(selected_code_key, GERMANY_CODE))
+    if selected_code != GERMANY_CODE and selected_code not in search_names:
+        # The pre-render check covers persisted state; this second check also
+        # protects the chart if a widget callback supplies an obsolete option.
+        selected_code = GERMANY_CODE
+        st.session_state[selected_code_key] = GERMANY_CODE
 
     if selected_code == GERMANY_CODE:
 
@@ -1628,26 +1675,12 @@ def render_chart(
         ].copy()
 
 
-    # Display names only: filtering keeps the original BA qualification values.
-    QUALIFICATION_DISPLAY_LABELS = {
-        "Insgesamt": "Overall",
-        "Gesamt": "Overall",
-        "Helfer": "Helpers",
-        "Fachkraft": "Skilled",
-        "Spezialist": "Specialists",
-        "Experte": "Experts",
-    }
-
-    # Compact labels are used only in the qualification selector. Keep the
-    # original BA qualification codes and full labels for data and Overlay.
-    QUALIFICATION_TAB_LABELS = {
-        "Insgesamt": "All",
-        "Gesamt": "All",
-        "Helfer": "Helper",
-        "Fachkraft": "Skilled",
-        "Spezialist": "Specialist",
-        "Experte": "Expert",
-    }
+    # Translate only display strings; original BA qualification keys stay fixed.
+    QUALIFICATION_DISPLAY_LABELS = QUALIFICATION_DISPLAY[DISPLAY_LANGUAGE]
+    QUALIFICATION_TAB_LABELS = (QUALIFICATION_TABS[DISPLAY_LANGUAGE]
+                                if _lme_viewport_mode == "desktop"
+                                else QUALIFICATION_MOBILE_TABS[DISPLAY_LANGUAGE])
+    QUALIFICATION_COMPACT_LABELS = QUALIFICATION_SHORT[DISPLAY_LANGUAGE]
 
     # Use a human-friendly order rather than alphabetical German sorting.
     qualification_order = (
@@ -1700,7 +1733,7 @@ def render_chart(
             )
             qualification_label_col.markdown(
                 '<span style="font-size: 0.86rem; font-weight: 600; '
-                'white-space: nowrap;">Qualification:</span>',
+                f'white-space: nowrap;">{tr("Qualification:", DISPLAY_LANGUAGE)}</span>',
                 unsafe_allow_html=True,
             )
         else:
@@ -1720,7 +1753,7 @@ def render_chart(
                 ]
 
         selected_qualification = qualification_choice_col.segmented_control(
-            "Qualification level",
+            tr("Qualification level", DISPLAY_LANGUAGE),
             options=qualification_options,
             selection_mode="single",
             format_func=lambda q: QUALIFICATION_TAB_LABELS.get(q, q),
@@ -1734,11 +1767,13 @@ def render_chart(
             selected_qualification = st.session_state[qualification_state_key]
     else:
         if render_output:
-            chart_container.warning("No qualification data is available for this occupation.")
+            chart_container.warning(tr("No qualification data is available for this occupation.", DISPLAY_LANGUAGE))
         return {
             "plot_df": pd.DataFrame(columns=["report_date", "indicator", "value"]),
-            "display_name": selected_name,
-            "qualification_label": "No qualification data",
+            "display_name": (GERMANY_LABEL if selected_code == GERMANY_CODE
+                             else search_names.get(str(selected_code), selected_name)),
+            "qualification_label": tr("No qualification data", DISPLAY_LANGUAGE),
+            "qualification_short": tr("No qualification data", DISPLAY_LANGUAGE),
             "chart_number": chart_number,
         }
 
@@ -1854,12 +1889,14 @@ def render_chart(
 
     if not selected_indicators:
         if render_output:
-            chart_container.info("Choose at least one indicator in the legend below.")
+            chart_container.info(tr("Choose at least one indicator in the legend below.", DISPLAY_LANGUAGE))
             render_indicator_legend(chart_container, chart_number)
         return {
             "plot_df": pd.DataFrame(columns=["report_date", "indicator", "value"]),
-            "display_name": selected_name,
+            "display_name": (GERMANY_LABEL if selected_code == GERMANY_CODE
+                             else search_names.get(str(selected_code), selected_name)),
             "qualification_label": qualification_label,
+            "qualification_short": QUALIFICATION_COMPACT_LABELS.get(selected_qualification, str(selected_qualification)),
             "chart_number": chart_number,
         }
 
@@ -1890,6 +1927,11 @@ def render_chart(
             value_name="value",
         )
         .dropna(subset=["value"])
+    )
+    # Only the tooltip sees this translated field. Internal indicator names,
+    # indexing, selection persistence, and Altair color domains are untouched.
+    plot_df["indicator_label"] = plot_df["indicator"].map(
+        lambda value: tr(value, DISPLAY_LANGUAGE)
     )
 
     if view_mode == "Indexed":
@@ -1923,15 +1965,15 @@ def render_chart(
         )
 
     y_axis_title = (
-        "Index (start = 100)"
+        tr("Index (start = 100)", DISPLAY_LANGUAGE)
         if view_mode == "Indexed"
         else None
     )
 
     display_name = (
-        "All occupations"
+        GERMANY_LABEL
         if selected_occupation_level == 0
-        else selected_name
+        else search_names.get(str(selected_code), selected_name)
     )
 
     chart_card = chart_container
@@ -1940,6 +1982,7 @@ def render_chart(
         "plot_df": plot_df,
         "display_name": display_name,
         "qualification_label": qualification_label,
+        "qualification_short": QUALIFICATION_COMPACT_LABELS.get(selected_qualification, str(selected_qualification)),
         "chart_number": chart_number,
     }
     if not render_output:
@@ -1962,13 +2005,7 @@ def render_chart(
     # The selected qualification materially changes the chart data. Show it
     # in mobile One as we already do in Overlay; do not alter desktop titles.
     if mobile_title and qualification_label:
-        short_qualification = {
-            "Overall": "All",
-            "Helpers": "Helper",
-            "Specialists": "Specialist",
-            "Experts": "Expert",
-        }.get(qualification_label, qualification_label)
-        displayed_title = f"{display_name} · {short_qualification}"
+        displayed_title = f"{display_name} · {chart_payload['qualification_short']}"
     else:
         displayed_title = display_name
     safe_display_name = html.escape(str(displayed_title), quote=True)
@@ -2000,7 +2037,7 @@ def render_chart(
 
     if combined_chart_df.empty:
         chart_card.warning(
-            "No time series is available for this selection."
+            tr("No time series is available for this selection.", DISPLAY_LANGUAGE)
         )
     else:
         color_scale = alt.Scale(
@@ -2041,18 +2078,18 @@ def render_chart(
                 tooltip=[
                     alt.Tooltip(
                         "report_date:T",
-                        title="Date",
+                        title=tr("Date", DISPLAY_LANGUAGE),
                     ),
                     alt.Tooltip(
-                        "indicator:N",
-                        title="Indicator",
+                        "indicator_label:N",
+                        title=tr("Indicator", DISPLAY_LANGUAGE),
                     ),
                     alt.Tooltip(
                         "value:Q",
                         title=(
-                            "Index"
+                            tr("Index", DISPLAY_LANGUAGE)
                             if view_mode == "Indexed"
-                            else "Value"
+                            else tr("Value", DISPLAY_LANGUAGE)
                         ),
                         format=",.1f"
                         if view_mode == "Indexed"
@@ -2166,17 +2203,23 @@ st.html("""<style>
 st.html("""<style>
 @media (max-width: 768px) {
     .st-key-combined_chart .lme-overlay-line-keys {
-        /* Keep ellipsis on two lines; give 8px more room below labels. */
-        padding-right: 38px !important;
+        /* Let labels use the card width. Reserve space for the native
+           Fullscreen action only on row A, where that action is placed. */
+        padding-right: 0 !important;
         gap: 6px !important;
         margin-bottom: 16px !important;
     }
     .st-key-combined_chart .lme-overlay-line-keys > div {
         gap: 7px !important;
     }
+    .st-key-combined_chart .lme-overlay-line-keys > div:first-child {
+        padding-right: 28px !important;
+        box-sizing: border-box;
+    }
     .st-key-combined_chart .lme-overlay-line-keys span[aria-hidden="true"] {
-        flex: 0 0 28px !important;
-        width: 28px !important;
+        /* Match the shorter solid and three-segment dashed line keys. */
+        flex: 0 0 26px !important;
+        width: 26px !important;
     }
     .st-key-combined_chart .lme-overlay-line-keys > div > span:last-child {
         font-size: 15px !important;
@@ -2198,15 +2241,8 @@ def render_combined_chart(payload_a, payload_b, chart_container) -> None:
     # explanation and the native Vega stroke-dash legend. Keep A/B internally.
     # Match Overlay legend labels to the qualification selector; do not alter
     # the underlying German BA values or the One/Two chart labels.
-    short_qualifications = {
-        "Overall": "All", "Helpers": "Helper",
-        "Specialists": "Specialist", "Experts": "Expert",
-    }
-
     def overlay_label(payload):
-        qualification = payload["qualification_label"]
-        qualification = short_qualifications.get(qualification, qualification)
-        return f"{payload['display_name']} · {qualification}"
+        return f"{payload['display_name']} · {payload['qualification_short']}"
 
     title_a = overlay_label(payload_a)
     title_b = overlay_label(payload_b)
@@ -2218,13 +2254,16 @@ def render_combined_chart(payload_a, payload_b, chart_container) -> None:
             display:flex; flex-direction:column; gap:8px;
             padding-right:110px; margin:2px 0 7px; min-width:0;">
           <div style="display:flex;align-items:center;gap:11px;min-width:0;">
-            <span aria-hidden="true" style="display:inline-block;flex:0 0 42px;
-              width:42px;border-top:3px solid #91b6e2;"></span>
+            <span aria-hidden="true" style="display:inline-block;flex:0 0 33px;
+              width:33px;border-top:3px solid #91b6e2;"></span>
             <span style="font-weight:600;line-height:1.35;overflow-wrap:anywhere;">{safe_a}</span>
           </div>
           <div style="display:flex;align-items:center;gap:11px;min-width:0;">
-            <span aria-hidden="true" style="display:inline-block;flex:0 0 42px;
-              width:42px;border-top:3px dashed #91b6e2;"></span>
+            <span aria-hidden="true" style="display:inline-block;flex:0 0 33px;
+              width:33px;height:3px; background:linear-gradient(to right,
+              #91b6e2 0 23%, transparent 23% 38%,
+              #91b6e2 38% 61%, transparent 61% 76%,
+              #91b6e2 76% 100%);"></span>
             <span style="font-weight:600;line-height:1.35;overflow-wrap:anywhere;">{safe_b}</span>
           </div>
         </div>
@@ -2243,7 +2282,7 @@ def render_combined_chart(payload_a, payload_b, chart_container) -> None:
             frames.append(frame)
 
     if not frames:
-        chart_container.info("Choose at least one indicator in the legend below.")
+        chart_container.info(tr("Choose at least one indicator in the legend below.", DISPLAY_LANGUAGE))
         render_overlay_indicator_legend(chart_container)
         return
 
@@ -2259,7 +2298,7 @@ def render_combined_chart(payload_a, payload_b, chart_container) -> None:
             x=alt.X("report_date:T", title=None),
             y=alt.Y(
                 "value:Q",
-                title="Index (start = 100)" if view_mode == "Indexed" else None,
+                title=tr("Index (start = 100)", DISPLAY_LANGUAGE) if view_mode == "Indexed" else None,
                 axis=alt.Axis(
                     format=",.0f" if view_mode == "Indexed" else "~s",
                 ),
@@ -2271,10 +2310,10 @@ def render_combined_chart(payload_a, payload_b, chart_container) -> None:
                 legend=None,
             ),
             tooltip=[
-                alt.Tooltip("report_date:T", title="Date"),
-                alt.Tooltip("occupation_selection:N", title="Selection"),
-                alt.Tooltip("indicator:N", title="Indicator"),
-                alt.Tooltip("value:Q", title="Index" if view_mode == "Indexed" else "Value",
+                alt.Tooltip("report_date:T", title=tr("Date", DISPLAY_LANGUAGE)),
+                alt.Tooltip("occupation_selection:N", title=tr("Selection", DISPLAY_LANGUAGE)),
+                alt.Tooltip("indicator_label:N", title=tr("Indicator", DISPLAY_LANGUAGE)),
+                alt.Tooltip("value:Q", title=tr("Index", DISPLAY_LANGUAGE) if view_mode == "Indexed" else tr("Value", DISPLAY_LANGUAGE),
                             format=",.1f" if view_mode == "Indexed" else ",.0f"),
             ],
         )

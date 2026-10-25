@@ -2,6 +2,7 @@ from pathlib import Path
 
 import streamlit as st
 from lme_brand import lme_compass_button_style, lme_home_button_style
+from lme_i18n import tr
 
 
 ASSETS_DIR = Path(__file__).parent / "assets"
@@ -671,11 +672,12 @@ def apply_app_style() -> None:
 
 def _render_information_header():
     """Retain the current informational-page navigation until About is redesigned."""
+    language = st.session_state.get("lme_language", "En")
     header_logo, header_nav = st.columns([1, 4], vertical_alignment="center")
 
     with header_logo:
         st.markdown(lme_compass_button_style(), unsafe_allow_html=True)
-        if st.button("LME", key="lme_home_button", type="tertiary", help="Open Welcome"):
+        if st.button("LME", key="lme_home_button", type="tertiary", help=tr("Open Welcome", language)):
             st.session_state["lme_screen"] = "welcome"
             st.switch_page("app.py")
 
@@ -685,13 +687,13 @@ def _render_information_header():
         )
 
     with nav_section_switch:
-        if st.button("Dashboard", key="nav_section_switch", width="stretch"):
+        if st.button(tr("Dashboard", language), key="nav_section_switch", width="stretch"):
             st.switch_page("app.py")
 
     # Historical informational-page button is retained here only; it is not
     # displayed on the Explorer workspace.
     with nav_about:
-        st.button("About", key="nav_about", width="stretch")
+        st.button(tr("About", language), key="nav_about", width="stretch")
 
     return None, None
 
@@ -725,28 +727,57 @@ def _explorer_header_style() -> str:
           white-space: nowrap;
       }
 
-      /* Languages sit next to Home. Only English is available for now. */
-      .st-key-lme_explorer_toolbar .lme-language-strip {
-          display: flex;
-          align-items: center;
-          justify-content: flex-start;
-          gap: 0.35rem;
-          min-height: 40px;
-          white-space: nowrap;
-          font-size: 0.88rem;
-          line-height: 1.2;
+      /* EN/DE occupation labels: compact native Streamlit selector; UA
+         stays a visibly inactive placeholder until localization is ready. */
+      .st-key-lme_explorer_toolbar .st-key-lme_language {
+          min-width: 0 !important;
       }
-      .st-key-lme_explorer_toolbar .lme-language-active {
-          font-weight: 700;
-          color: var(--lme-text);
+      .st-key-lme_explorer_toolbar .st-key-lme_language
+      [data-testid="stSegmentedControl"] {
+          width: max-content !important;
+          max-width: 100% !important;
+          min-height: 38px !important;
       }
-      .st-key-lme_explorer_toolbar .lme-language-planned {
+      .st-key-lme_explorer_toolbar .st-key-lme_language [role="group"] {
+          display: flex !important;
+          align-items: center !important;
+          gap: 0 !important;
+          background: transparent !important;
+          border: 0 !important;
+          box-shadow: none !important;
+          white-space: nowrap !important;
+      }
+      .st-key-lme_explorer_toolbar .st-key-lme_language
+      button[data-variant="segmented_control"] {
+          min-height: 36px !important;
+          min-width: 28px !important;
+          padding: 0.28rem 0.32rem !important;
+          background: transparent !important;
+          color: var(--lme-text-secondary) !important;
+          border: 0 !important;
+          box-shadow: none !important;
+          border-radius: 5px !important;
+          font-size: 0.85rem !important;
+          font-weight: 500 !important;
+      }
+      .st-key-lme_explorer_toolbar .st-key-lme_language
+      button[data-variant="segmented_control"][data-selected="true"] {
+          background: #e9ebef !important;
+          color: var(--lme-text) !important;
+          font-weight: 700 !important;
+      }
+      .st-key-lme_explorer_toolbar .st-key-lme_language
+      button[data-variant="segmented_control"]:hover {
+          background: #f0f1f3 !important;
+      }
+      .st-key-lme_explorer_toolbar .st-key-lme_language [role="group"]::after {
+          content: "|  Ua";
+          display: inline-block;
+          margin-left: 0.28rem;
           color: var(--lme-text-secondary);
-          opacity: 0.72;
-      }
-      .st-key-lme_explorer_toolbar .lme-language-divider {
-          color: #c1c6cd;
-          font-weight: 400;
+          opacity: 0.65;
+          font-size: 0.84rem;
+          white-space: pre;
       }
 
       /* Two robust icon-only native buttons for data view. The SVG sits on
@@ -974,6 +1005,10 @@ def _render_explorer_header():
     st.markdown(_explorer_header_style(), unsafe_allow_html=True)
     st.markdown(lme_home_button_style(), unsafe_allow_html=True)
 
+    # EN/DE changes display strings only; selected KldB codes remain stable.
+    if st.session_state.get("lme_language") not in ("En", "De"):
+        st.session_state.lme_language = "En"
+
     # Preserve values consumed by the existing charts. Don't rename these keys.
     if st.session_state.get("global_view_mode") not in ("Absolute", "Indexed"):
         st.session_state.global_view_mode = "Absolute"
@@ -985,15 +1020,17 @@ def _render_explorer_header():
             and st.session_state.chart_layout == "Compare"):
         st.session_state.chart_layout = "Single"
 
+    language = st.session_state.lme_language
+
     def toggle_mobile_compare():
         st.session_state.chart_layout = (
             "Single" if st.session_state.chart_layout == "Combined" else "Combined"
         )
 
     layout_labels = {
-        "Single": "One",
-        "Compare": "Two",
-        "Combined": "Overlay",
+        "Single": tr("One", language),
+        "Compare": tr("Two", language),
+        "Combined": tr("Overlay", language),
     }
 
     # Current data view is indicated by a quiet gray background.
@@ -1023,27 +1060,25 @@ def _render_explorer_header():
 
         with home_col:
             if st.button(
-                "Home",
+                tr("Home", language),
                 key="lme_explorer_home",
                 type="tertiary",
-                help="Back to Welcome",
+                help=tr("Back to Welcome", language),
                 width="content",
             ):
                 st.session_state["lme_screen"] = "welcome"
                 st.switch_page("app.py")
 
         with language_col:
-            st.markdown(
-                """<div class="lme-language-strip" role="group"
-                     aria-label="Languages: English available; German and Ukrainian planned">
-                     <span class="lme-language-active" aria-current="true"
-                           title="English — current language">En</span>
-                     <span class="lme-language-divider" aria-hidden="true">|</span>
-                     <span class="lme-language-planned" title="Deutsch — coming later">De</span>
-                     <span class="lme-language-divider" aria-hidden="true">|</span>
-                     <span class="lme-language-planned" title="Українська — coming later">Ua</span>
-                   </div>""",
-                unsafe_allow_html=True,
+            # Existing two-character language choices become interactive.
+            # Ukrainian stays a visual placeholder in the scoped toolbar CSS.
+            st.segmented_control(
+                "Occupation label language",  # stable invisible widget label
+                options=["En", "De"],
+                key="lme_language",
+                selection_mode="single",
+                label_visibility="collapsed",
+                width="content",
             )
 
         with view_col:
@@ -1053,9 +1088,9 @@ def _render_explorer_header():
                 absolute_col, indexed_col = st.columns(2, gap="small")
                 with absolute_col:
                     if st.button(
-                        "Absolute values",
+                        tr("Absolute values", language),
                         key="lme_view_absolute",
-                        help="Absolute values",
+                        help=tr("Absolute values", language),
                         type="tertiary",
                         width="stretch",
                     ):
@@ -1063,9 +1098,9 @@ def _render_explorer_header():
                         st.rerun()
                 with indexed_col:
                     if st.button(
-                        "Indexed (start = 100)",
+                        tr("Indexed (start = 100)", language),
                         key="lme_view_indexed",
-                        help="Indexed (start = 100), not percentages",
+                        help=tr("Indexed (start = 100), not percentages", language),
                         type="tertiary",
                         width="stretch",
                     ):
@@ -1082,17 +1117,17 @@ def _render_explorer_header():
             # Native mobile comparison toggle. It reuses the established
             # Single/Combined values; app.py and both chart renderers are intact.
             st.button(
-                "Exit comparison" if st.session_state.chart_layout == "Combined"
-                else "Compare occupations",
+                tr("Exit comparison" if st.session_state.chart_layout == "Combined"
+                   else "Compare occupations", language),
                 key="lme_mobile_compare",
                 type="tertiary",
-                help="Return to one chart" if st.session_state.chart_layout == "Combined"
-                else "Compare two occupations (Overlay)",
+                help=tr("Return to one chart" if st.session_state.chart_layout == "Combined"
+                        else "Compare two occupations (Overlay)", language),
                 on_click=toggle_mobile_compare,
                 width="stretch",
             )
             st.segmented_control(
-                "Chart layout",
+                "Chart layout",  # stable invisible widget label
                 options=list(layout_labels),
                 format_func=lambda mode: layout_labels[mode],
                 key="chart_layout",

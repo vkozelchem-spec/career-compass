@@ -5,9 +5,11 @@ Browser persistence is handled by the app-level preference callback.
 """
 
 from typing import Callable
+import html
+
+from lme_i18n import tr
 
 import streamlit as st
-from lme_brand import COMPASS_SVG
 
 
 _WELCOME_STYLE = """
@@ -59,33 +61,152 @@ _WELCOME_STYLE = """
     background: #e30613;
     border-radius: 50%;
 }
-.lme-welcome-brand {
-    display: flex;
-    align-items: center;
-    gap: .55rem;
-    color: #171717;
-    font-size: 1.13rem;
-    font-weight: 700;
-    white-space: nowrap;
-}
-.lme-welcome-brand-icon { display: inline-flex; align-items: center; }
-.lme-welcome-brand-icon svg { width: 20px; height: 20px; }
-/* Streamlit columns normally stack on phones. Only this header stays in a row. */
-.st-key-lme_welcome_header div[data-testid="stHorizontalBlock"] {
+/* Welcome header: language at the LEFT edge, About at the RIGHT edge.
+   Keep the two actions on one line even when Streamlit stacks columns. */
+.st-key-lme_welcome_header [data-testid="stHorizontalBlock"] {
+    display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
     align-items: center !important;
     gap: .35rem !important;
 }
-.st-key-lme_welcome_header div[data-testid="stColumn"]:first-child {
-    flex: 1 1 0 !important;
+.st-key-lme_welcome_header [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:first-child {
+    flex: 0 0 128px !important;
+    width: 128px !important;
+    min-width: 0 !important;
+    max-width: 128px !important;
+}
+.st-key-lme_welcome_header [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(2) {
+    flex: 1 1 auto !important;
     width: auto !important;
     min-width: 0 !important;
 }
-.st-key-lme_welcome_header div[data-testid="stColumn"]:last-child {
+.st-key-lme_welcome_header [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child {
     flex: 0 0 auto !important;
     width: auto !important;
     min-width: 0 !important;
+}
+/* Language is a quiet text action, matching About at the opposite edge.
+   Keep the trigger borderless in both light and dark browser themes. */
+.st-key-lme_welcome_language_area [data-testid="stPopover"] button {
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 36px !important;
+    padding: .25rem .1rem !important;
+    justify-content: flex-start !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    color: #475467 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    font-weight: 600 !important;
+    color-scheme: light !important;
+}
+.st-key-lme_welcome_language_area [data-testid="stPopover"] button :is(p, span, svg) {
+    color: #475467 !important;
+    -webkit-text-fill-color: #475467 !important;
+}
+.st-key-lme_welcome_language_area [data-testid="stPopover"] button:hover {
+    background: transparent !important;
+    color: #171717 !important;
+}
+.st-key-lme_welcome_language_area [data-testid="stPopover"] button:focus:not(:focus-visible) {
+    outline: none !important;
+    box-shadow: none !important;
+}
+.st-key-lme_welcome_language_area [data-testid="stPopover"] button:focus-visible {
+    outline: 2px solid #8093aa !important;
+    outline-offset: 2px !important;
+}
+/* The language popover is portaled to the page body by Streamlit.
+   Use its unique marker to avoid affecting Explorer or About popovers. */
+body [data-baseweb="popover"]:has(.lme-welcome-language-popup-marker),
+body [data-testid="stPopoverBody"]:has(.lme-welcome-language-popup-marker) {
+    color-scheme: light !important;
+    background: #fff !important;
+    background-color: #fff !important;
+    color: #27303f !important;
+    border: 1px solid #d5d9df !important;
+    border-radius: 10px !important;
+    box-shadow: 0 7px 20px rgba(16, 24, 40, .12) !important;
+}
+/* Give the popup an EXPLICIT compact width, on both mobile and desktop.
+   100% here expanded the popover to the whole desktop viewport: the outer
+   BaseWeb overlay can itself be full-width, so percentage sizing is unsafe. */
+body [data-baseweb="popover"]:has(.lme-welcome-language-popup-marker),
+body [data-testid="stPopoverBody"]:has(.lme-welcome-language-popup-marker) {
+    width: min(210px, calc(100vw - 32px)) !important;
+    min-width: 0 !important;
+    max-width: min(210px, calc(100vw - 32px)) !important;
+    box-sizing: border-box !important;
+}
+body [data-baseweb="popover"]:has(.lme-welcome-language-popup-marker) > div {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+body [data-testid="stPopoverBody"]:has(.lme-welcome-language-popup-marker) {
+    /* Compact top and bottom spacing around the two options. */
+    padding: .2rem .3rem !important;
+}
+/* Reset theme-painted nested portal wrappers without touching the two buttons. */
+body [data-baseweb="popover"]:has(.lme-welcome-language-popup-marker)
+:is(div, ul, li, p, span, label):not([data-testid="stPopoverBody"]) {
+    background-color: transparent !important;
+    color: #27303f !important;
+}
+body [data-testid="stPopoverBody"]:has(.lme-welcome-language-popup-marker)
+:is([data-testid="stVerticalBlock"], [data-testid="stElementContainer"],
+    [data-testid="stButton"], [data-testid="stMarkdownContainer"]) {
+    background: transparent !important;
+    color: #27303f !important;
+    box-shadow: none !important;
+}
+body [data-testid="stPopoverBody"]:has(.lme-welcome-language-popup-marker)
+[data-testid="stElementContainer"]:has(.lme-welcome-language-popup-marker) {
+    display: none !important;
+}
+body [data-testid="stPopoverBody"]:has(.lme-welcome-language-popup-marker)
+[data-testid="stVerticalBlock"] {
+    gap: .1rem !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+body [data-testid="stPopoverBody"]:has(.lme-welcome-language-popup-marker)
+[data-testid="stElementContainer"] {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+body [data-testid="stPopoverBody"]:has(.lme-welcome-language-popup-marker)
+[class*="st-key-lme_welcome_language_option_"] button {
+    display: flex !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    min-height: 32px !important;
+    padding: .2rem .55rem !important;
+    text-align: left !important;
+    background: #fff !important;
+    color: #27303f !important;
+    border: none !important;
+    border-radius: 7px !important;
+    box-shadow: none !important;
+    font-weight: 500 !important;
+}
+body [data-testid="stPopoverBody"]:has(.lme-welcome-language-popup-marker)
+[class*="st-key-lme_welcome_language_option_"] button :is(p, span) {
+    background: transparent !important;
+    color: #27303f !important;
+    -webkit-text-fill-color: #27303f !important;
+    text-align: left !important;
+}
+body [data-testid="stPopoverBody"]:has(.lme-welcome-language-popup-marker)
+[class*="st-key-lme_welcome_language_option_"] button:is([kind="primary"], [data-testid="stBaseButton-primary"]),
+body [data-testid="stPopoverBody"]:has(.lme-welcome-language-popup-marker)
+[class*="st-key-lme_welcome_language_option_"] button:hover {
+    background: #e9ebef !important;
+    color: #171717 !important;
 }
 /* 'About' is a light navigation link, not a full-width CTA. */
 .st-key-lme_welcome_about button {
@@ -128,8 +249,8 @@ _WELCOME_STYLE = """
    Reverse only the Streamlit vertical block containing BOTH action elements. */
 @media (min-width: 769px) {
     .lme-welcome-grid {
-        /* Lift the heading, preview, and benefits slightly to make room. */
-        margin-top: clamp(.6rem, 1.4vh, 1rem);
+        /* Without the LME emblem, let the headline start immediately below About. */
+        margin-top: 0;
         margin-bottom: .4rem;
     }
     .st-key-lme_welcome_actions[data-testid="stVerticalBlock"]:has(.st-key-lme_welcome_explore):has(.st-key-lme_welcome_skip_area),
@@ -162,8 +283,7 @@ _WELCOME_STYLE = """
     .lme-welcome-grid {
         grid-template-columns: minmax(0, 1fr);
         grid-template-areas: "heading" "graph" "benefits";
-        /* Keep comfortable separation from the LME/About header,
-           while reducing the space between the headline and preview. */
+        /* Bring the headline close to the minimal About link. */
         row-gap: .5rem;
         margin-top: -1.15rem;
         margin-bottom: .1rem;
@@ -188,12 +308,12 @@ _WELCOME_STYLE = """
 _WELCOME_CONTENT = """
 <div class="lme-welcome-grid">
   <div class="lme-welcome-heading">
-    <h1 class="lme-welcome-headline">Explore the<br>labour market.</h1>
+    <h1 class="lme-welcome-headline">{headline}</h1>
   </div>
   <div class="lme-welcome-graph">
     <div class="lme-welcome-preview">
       <svg viewBox="0 0 420 260" role="img"
-        aria-label="Illustrative trend lines, not real statistics"
+        aria-label="{graph_aria}"
         xmlns="http://www.w3.org/2000/svg">
         <g stroke="#e6e8eb" stroke-width="1">
           <path d="M8 45H412 M8 95H412 M8 145H412 M8 195H412"/>
@@ -204,17 +324,17 @@ _WELCOME_CONTENT = """
           fill="none" stroke="#4c78a8" stroke-width="4" stroke-linecap="round"/>
         <path d="M8 230 C65 227 108 214 160 210 S236 197 297 211 S364 173 412 179"
           fill="none" stroke="#59a14f" stroke-width="3.5" stroke-linecap="round"/>
-        <text x="10" y="253" font-size="12" fill="#98a2b3">Illustrative preview · Germany</text>
+        <text x="10" y="253" font-size="12" fill="#98a2b3">{graph_caption}</text>
       </svg>
     </div>
   </div>
   <div class="lme-welcome-benefits">
     <div class="lme-welcome-benefit"><span class="lme-welcome-dot" aria-hidden="true"></span>
-      <span>Browse hundreds of occupations</span></div>
+      <span>{benefit_1}</span></div>
     <div class="lme-welcome-benefit"><span class="lme-welcome-dot" aria-hidden="true"></span>
-      <span>Compare employment and vacancies</span></div>
+      <span>{benefit_2}</span></div>
     <div class="lme-welcome-benefit"><span class="lme-welcome-dot" aria-hidden="true"></span>
-      <span>Understand changes over time</span></div>
+      <span>{benefit_3}</span></div>
   </div>
 </div>
 """
@@ -225,6 +345,7 @@ def render_welcome(
     on_about: Callable[[], None],
     skip_default: bool = False,
     on_skip_change: Callable[[], None] | None = None,
+    language: str = "En",
 ) -> bool:
     """Render Welcome, keeping the checkbox in sync with the saved preference."""
     st.markdown(_WELCOME_STYLE, unsafe_allow_html=True)
@@ -234,27 +355,60 @@ def render_welcome(
     if "lme_skip_welcome" not in st.session_state:
         st.session_state.lme_skip_welcome = skip_default
 
+    # The app supplies the semantic language from session state. Do not attach
+    # a selectbox widget key here: Streamlit removes hidden widget keys during
+    # navigation, while app.py preserves the preference separately.
+    lang = language if language in ("En", "De") else "En"
+
+    def set_welcome_language(selected: str) -> None:
+        st.session_state.lme_language = selected
+        st.session_state.lme_language_preference = selected
+        st.rerun()
+
+    # Left: compact language dropdown. Right: "About" on both EN and DE pages.
+    # st.popover replaces native st.selectbox, whose closed field stayed dark
+    # on some phone themes despite targeted CSS overrides.
     with st.container(key="lme_welcome_header"):
-        brand_col, about_col = st.columns([5, 1], vertical_alignment="center")
-        with brand_col:
-            st.markdown(
-                '<div class="lme-welcome-brand">'
-                f'<span class="lme-welcome-brand-icon">{COMPASS_SVG}</span>'
-                '<span>LME</span></div>',
-                unsafe_allow_html=True,
-            )
+        language_col, _, about_col = st.columns(
+            [1.5, 5, 1], gap="small", vertical_alignment="center"
+        )
+        with language_col:
+            with st.container(key="lme_welcome_language_area"):
+                with st.popover(
+                    "English" if lang == "En" else "Deutsch",
+                    help="More languages (Ru, Ua, Fr) are planned.",
+                    width="content",
+                ):
+                    st.html('<span class="lme-welcome-language-popup-marker" aria-hidden="true"></span>')
+                    for code, name in (("En", "English"), ("De", "Deutsch")):
+                        if st.button(
+                            f"{'✓ ' if code == lang else ''}{name}",
+                            key=f"lme_welcome_language_option_{code}",
+                            type="primary" if code == lang else "tertiary",
+                            width="stretch",
+                        ):
+                            set_welcome_language(code)
         with about_col:
             if st.button("About ↗", key="lme_welcome_about"):
                 on_about()
 
-    st.markdown(_WELCOME_CONTENT, unsafe_allow_html=True)
+    content = _WELCOME_CONTENT.format(
+        headline=html.escape(tr("Explore the labour market.", lang)).replace("|", "<br>")
+        if lang == "De" else "Explore the<br>labour market.",
+        graph_aria=html.escape(tr("Illustrative trend lines, not real statistics", lang), quote=True),
+        graph_caption=html.escape(tr("Illustrative preview · Germany", lang)),
+        benefit_1=html.escape(tr("Browse hundreds of occupations", lang)),
+        benefit_2=html.escape(tr("Compare employment and vacancies", lang)),
+        benefit_3=html.escape(tr("Understand changes over time", lang)),
+    )
+    st.markdown(content, unsafe_allow_html=True)
 
     with st.container(key="lme_welcome_actions"):
-        if st.button("Start exploring →", key="lme_welcome_explore", width="stretch"):
+        if st.button(f"{tr('Start exploring', lang)} →", key="lme_welcome_explore", width="stretch"):
             on_explore()
         with st.container(key="lme_welcome_skip_area"):
             skip = st.checkbox(
-                "Don't show this again",
+                tr("Don't show this again", lang),
                 key="lme_skip_welcome",
                 on_change=on_skip_change,
             )

@@ -71,12 +71,20 @@ def open_about():
     st.switch_page("pages/data_sources.py")
 
 
+# Keep one semantic language preference across Welcome and Explorer. Streamlit
+# cleans up widget keys when their screen is not rendered, so keep a shadow value.
+if st.session_state.get("lme_language") in ("En", "De"):
+    st.session_state.lme_language_preference = st.session_state.lme_language
+else:
+    st.session_state.lme_language = st.session_state.get("lme_language_preference", "En")
+
 if st.session_state.lme_screen == "welcome":
     render_welcome(
         on_explore=open_explorer,
         on_about=open_about,
         skip_default=st.session_state.lme_skip_preference,
         on_skip_change=on_skip_welcome_change,
+        language=st.session_state.lme_language,
     )
     st.stop()
 

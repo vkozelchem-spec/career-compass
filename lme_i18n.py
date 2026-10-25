@@ -61,6 +61,15 @@ DE = {
     "Dashboard": "Diagramme",
     "About": "Über",
     "Open Welcome": "Startseite öffnen",
+    # Welcome Page
+    "Explore the labour market.": "Arbeitsmarkt|entdecken.",
+    "Illustrative trend lines, not real statistics": "Beispielhafte Trendlinien, keine echten Statistiken",
+    "Illustrative preview · Germany": "Beispielgrafik · Deutschland",
+    "Browse hundreds of occupations": "Hunderte Berufe entdecken",
+    "Compare employment and vacancies": "Beschäftigung und offene Stellen vergleichen",
+    "Understand changes over time": "Entwicklungen im Zeitverlauf erkennen",
+    "Start exploring": "Jetzt entdecken",
+    "Don't show this again": "Nicht erneut anzeigen",
 }
 
 INDICATORS = {

@@ -185,6 +185,24 @@ CHART_HEIGHT = {"portrait": 260, "landscape": 200, "desktop": 380}[_lme_viewport
 # Desktop charts retain their existing pan/zoom behavior.
 ENABLE_CHART_PAN_ZOOM = _lme_viewport_mode == "desktop"
 
+# LME_MOBILE_THEME_FIX_20261029: explicit mobile Vega/Altair palette.
+# Desktop keeps its established Streamlit chart styling unchanged.
+def _lme_mobile_plot_theme(chart):
+    if _lme_viewport_mode == "desktop":
+        return chart
+    return (
+        chart.properties(background="#0e1117")
+        .configure_view(fill="#0e1117", stroke=None)
+        .configure_axis(
+            labelColor="#b6c0cd",
+            titleColor="#b6c0cd",
+            gridColor="#343d48",
+            tickColor="#677586",
+            domainColor="#677586",
+        )
+    )
+
+
 # Explorer only: V9 placement for Streamlit's NATIVE Altair toolbar.
 # Keep the V6 chart spacing and stable hover behaviour; move only the toolbar
 # above the plotting surface in One/Two views. Overlay has its own title-row offset.
@@ -1036,6 +1054,29 @@ st.html(
 
     </style>"""
 )
+
+# LME_MOBILE_THEME_FIX_20261029: only affect the mobile Explorer UI.
+if _lme_viewport_mode in ("portrait", "landscape"):
+    st.html("""<style>
+    :root { --lme-preview-chart: #0e1117 !important; }
+    /* Give the selectbox's right-hand chevron segment the same slate fill. */
+    :is(.st-key-controls_a, .st-key-controls_b)
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div,
+    :is(.st-key-controls_a, .st-key-controls_b)
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div > div,
+    :is(.st-key-controls_a, .st-key-controls_b)
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div > div:last-child,
+    div[class*="st-key-occupation_picker_row_"]
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div > div:last-child {
+        background: #2d3b4c !important;
+        color: #f5f8fc !important;
+    }
+    div[class*="st-key-occupation_picker_row_"]
+    [data-testid="stSelectbox"] [data-baseweb="select"] :is(svg, svg *) {
+        color: #f5f8fc !important;
+        stroke: currentColor !important;
+    }
+    </style>""")
 
 #st.title("Explore the labour market")
 
@@ -2147,9 +2188,11 @@ def render_chart(
         if ENABLE_CHART_PAN_ZOOM:
             chart = chart.interactive()
 
+        chart = _lme_mobile_plot_theme(chart)
         chart_card.altair_chart(
             chart,
             width="stretch",
+            theme=None if _lme_viewport_mode != "desktop" else "streamlit",
         )
 
     render_indicator_legend(chart_container, chart_number)
@@ -2367,7 +2410,12 @@ def render_combined_chart(payload_a, payload_b, chart_container) -> None:
     )
     if ENABLE_CHART_PAN_ZOOM:
         chart = chart.interactive()
-    chart_container.altair_chart(chart, width="stretch")
+    chart = _lme_mobile_plot_theme(chart)
+    chart_container.altair_chart(
+        chart,
+        width="stretch",
+        theme=None if _lme_viewport_mode != "desktop" else "streamlit",
+    )
     # One shared set of indicators for both occupation selections.
     render_overlay_indicator_legend(chart_container)
 

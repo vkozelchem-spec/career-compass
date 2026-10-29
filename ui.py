@@ -961,6 +961,23 @@ def _explorer_header_style() -> str:
           font-weight: 400;
       }
 
+       /* Small persistent entry to the separate How it works guide. */
+       .st-key-lme_explorer_toolbar .st-key-lme_explorer_help button {
+           height: 38px !important;
+           min-height: 38px !important;
+           padding: 0 .25rem !important;
+           border: 0 !important;
+           box-shadow: none !important;
+           background: transparent !important;
+           font-size: 1.1rem !important;
+           font-weight: 700 !important;
+           color: var(--lme-text-secondary) !important;
+       }
+       .st-key-lme_explorer_toolbar .st-key-lme_explorer_help button:hover {
+           background: #e9ebef !important;
+           color: var(--lme-text) !important;
+       }
+
       /* Narrow viewports: navigation/language on row 1, analysis controls on row 2. */
       @media (max-width: 1050px) {
           .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] {
@@ -974,12 +991,16 @@ def _explorer_header_style() -> str:
               width: 100% !important;
               max-width: none !important;
           }
-          /* 1 Home; 2 languages; 3 desktop spacer; 4 view; 5 divider; 6 layout. */
+          /* 1 Home; 2 languages; 3 spacer; 4 view; 5 divider; 6 layout; 7 Help. */
           .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(1) {
               grid-column: span 2;
           }
           .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(2) {
-              grid-column: span 10;
+              grid-column: span 8;
+          }
+          .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(7) {
+              grid-column: 11 / 13;
+              grid-row: 1;
           }
           .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(3),
           .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(5) {
@@ -1012,9 +1033,9 @@ def _explorer_header_style() -> str:
       }
       @media (max-width: 600px) and (max-height: 1000px),
              (max-height: 600px) and (max-width: 1000px) {
-          /* Four visible slots: Home / languages / mode / comparison. */
+          /* Five slots: Home / languages / mode / comparison / Help. */
           .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"] {
-              grid-template-columns: 58px minmax(0, 1fr) 76px 42px !important;
+              grid-template-columns: 44px minmax(0, 1fr) 70px 42px 34px !important;
               gap: 0.15rem !important;
               align-items: center !important;
           }
@@ -1033,6 +1054,11 @@ def _explorer_header_style() -> str:
           .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"]
           > div[data-testid="stColumn"]:nth-child(6) {
               grid-column: 4 !important;
+          }
+          .st-key-lme_explorer_toolbar div[data-testid="stHorizontalBlock"]
+          > div[data-testid="stColumn"]:nth-child(7) {
+              grid-column: 5 !important;
+              grid-row: 1 !important;
           }
           .st-key-lme_explorer_toolbar .lme-language-strip {
               gap: 0.2rem !important;
@@ -1118,8 +1144,8 @@ def _render_explorer_header():
         )
 
     with st.container(key="lme_explorer_toolbar"):
-        home_col, language_col, spacer_col, view_col, divider_col, layout_col = st.columns(
-            [0.55, 1.30, 7.25, 1.20, 0.18, 2.45],
+        home_col, language_col, spacer_col, view_col, divider_col, layout_col, help_col = st.columns(
+            [0.55, 1.30, 6.85, 1.20, 0.18, 2.45, 0.40],
             gap="small",
             vertical_alignment="center",
         )
@@ -1210,6 +1236,13 @@ def _render_explorer_header():
                 label_visibility="collapsed",
                 width="stretch",
             )
+
+        with help_col:
+            if st.button("?", key="lme_explorer_help", type="tertiary",
+                         help=tr("How it works", language), width="stretch"):
+                st.session_state["lme_help_origin"] = "explorer"
+                st.session_state["lme_screen"] = "help"
+                st.switch_page("app.py")
 
     return st.session_state.chart_layout, st.session_state.global_view_mode
 

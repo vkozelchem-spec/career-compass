@@ -2,6 +2,7 @@ from pathlib import Path
 import html
 from ui import apply_app_style, render_header
 from lme_welcome import render_welcome
+from lme_help import render_help
 from kldb_localization import load_kldb_labels, occupation_label
 from lme_i18n import tr, QUALIFICATION_DISPLAY, QUALIFICATION_TABS, QUALIFICATION_MOBILE_TABS, QUALIFICATION_SHORT
 
@@ -71,6 +72,17 @@ def open_about():
     st.switch_page("pages/data_sources.py")
 
 
+def open_help(from_screen: str = "explorer"):
+    st.session_state.lme_help_origin = from_screen
+    st.session_state.lme_screen = "help"
+    st.rerun()
+
+
+def open_welcome():
+    st.session_state.lme_screen = "welcome"
+    st.rerun()
+
+
 # Keep one semantic language preference across Welcome and Explorer. Streamlit
 # cleans up widget keys when their screen is not rendered, so keep a shadow value.
 if st.session_state.get("lme_language") in ("En", "De"):
@@ -82,9 +94,19 @@ if st.session_state.lme_screen == "welcome":
     render_welcome(
         on_explore=open_explorer,
         on_about=open_about,
+        on_help=lambda: open_help("welcome"),
         skip_default=st.session_state.lme_skip_preference,
         on_skip_change=on_skip_welcome_change,
         language=st.session_state.lme_language,
+    )
+    st.stop()
+
+if st.session_state.lme_screen == "help":
+    render_help(
+        on_explore=open_explorer,
+        on_welcome=open_welcome,
+        language=st.session_state.lme_language,
+        from_welcome=st.session_state.get("lme_help_origin") == "welcome",
     )
     st.stop()
 
@@ -1264,7 +1286,11 @@ def render_chart(
     selected_code_key = f"selected_occupation_code_{chart_number}"
 
     if selected_code_key not in st.session_state:
-        st.session_state[selected_code_key] = GERMANY_CODE
+        # Only initial defaults; preserve later user selections.
+        st.session_state[selected_code_key] = {
+            1: "413",  # Chemistry
+            2: "434",  # Software development and programming
+        }.get(chart_number, GERMANY_CODE)
 
 
     # ---------------------------------------------------------
@@ -1791,6 +1817,7 @@ def render_chart(
                              else search_names.get(str(selected_code), selected_name)),
             "qualification_label": tr("No qualification data", DISPLAY_LANGUAGE),
             "qualification_short": tr("No qualification data", DISPLAY_LANGUAGE),
+            "qualification_is_overall": False,
             "chart_number": chart_number,
         }
 
@@ -1914,6 +1941,7 @@ def render_chart(
                              else search_names.get(str(selected_code), selected_name)),
             "qualification_label": qualification_label,
             "qualification_short": QUALIFICATION_COMPACT_LABELS.get(selected_qualification, str(selected_qualification)),
+            "qualification_is_overall": selected_qualification in ("Insgesamt", "Gesamt"),
             "chart_number": chart_number,
         }
 
@@ -1997,6 +2025,7 @@ def render_chart(
         "display_name": display_name,
         "qualification_label": qualification_label,
         "qualification_short": QUALIFICATION_COMPACT_LABELS.get(selected_qualification, str(selected_qualification)),
+        "qualification_is_overall": selected_qualification in ("Insgesamt", "Gesamt"),
         "chart_number": chart_number,
     }
     if not render_output:
@@ -2016,9 +2045,9 @@ def render_chart(
     title_bottom_gap = "16px" if mobile_title else "0.25rem"
     title_overflow = "hidden" if mobile_title else "visible"
     title_ellipsis = "ellipsis" if mobile_title else "clip"
-    # The selected qualification materially changes the chart data. Show it
-    # in mobile One as we already do in Overlay; do not alter desktop titles.
-    if mobile_title and qualification_label:
+    # Mobile One shows a specific qualification; desktop One/Two keep
+    # their concise occupation-only headings. Overall (All/Alle) is implicit.
+    if mobile_title and qualification_label and not chart_payload["qualification_is_overall"]:
         displayed_title = f"{display_name} · {chart_payload['qualification_short']}"
     else:
         displayed_title = display_name
@@ -2256,6 +2285,9 @@ def render_combined_chart(payload_a, payload_b, chart_container) -> None:
     # Match Overlay legend labels to the qualification selector; do not alter
     # the underlying German BA values or the One/Two chart labels.
     def overlay_label(payload):
+        # Omit the redundant All/Alle suffix; keep specific qualification labels.
+        if payload["qualification_is_overall"]:
+            return payload["display_name"]
         return f"{payload['display_name']} · {payload['qualification_short']}"
 
     title_a = overlay_label(payload_a)

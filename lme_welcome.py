@@ -1,11 +1,15 @@
-"""Responsive LME welcome screen.
+"""Responsive LME welcome screen (single-photo, compact version).
 
 Independent from the data-loading/chart logic. The caller owns navigation.
 Browser persistence is handled by the app-level preference callback.
 """
 
 from typing import Callable
+import base64
 import html
+import io
+from pathlib import Path
+from urllib.request import Request, urlopen
 
 from lme_i18n import tr
 
@@ -20,7 +24,7 @@ _WELCOME_STYLE = """
     grid-template-columns: minmax(0, .92fr) minmax(0, 1.15fr);
     grid-template-areas: "heading graph" "benefits graph";
     column-gap: clamp(1.5rem, 4vw, 4rem);
-    row-gap: 1.4rem;
+    row-gap: .85rem;
     align-items: center;
     max-width: 1450px;
     margin: clamp(1.6rem, 4vh, 3rem) auto 1.3rem;
@@ -30,36 +34,47 @@ _WELCOME_STYLE = """
 .lme-welcome-benefits { grid-area: benefits; align-self: start; }
 .lme-welcome-headline {
     margin: 0;
-    font-size: clamp(2.2rem, 3.4vw, 3.5rem);
-    line-height: 1.11;
-    font-weight: 750;
-    letter-spacing: -.035em;
+    font-size: clamp(2.08rem, 3vw, 3.08rem);
+    line-height: 1.12;
+    font-weight: 800;
+    letter-spacing: -.003em;
     color: #171717;
 }
-.lme-welcome-preview {
-    background: #fff;
-    border: 1px solid #e2e5e9;
-    border-radius: 18px;
-    padding: 1.1rem 1rem .5rem;
-    box-shadow: 0 4px 18px rgba(16, 24, 40, .05);
+.lme-welcome-headline .lme-welcome-line { white-space: nowrap; }
+/* Static documentary photo. Locally embedded, so it never hotlinks in browsers. */
+.lme-welcome-preview { width: 100%; min-width: 0; }
+.lme-welcome-photo {
+    width: 100%;
+    aspect-ratio: 2.30 / 1;
+    overflow: hidden;
+    background: #cbd2da;
+    border-radius: 15px;
+    box-shadow: 0 4px 18px rgba(16, 24, 40, .09);
 }
-.lme-welcome-preview svg { display: block; width: 100%; height: auto; }
-.lme-welcome-benefit {
-    display: flex;
-    align-items: flex-start;
-    gap: .75rem;
-    margin: 0 0 1rem;
-    font-size: .98rem;
-    line-height: 1.4;
-    color: #27303f;
+.lme-welcome-photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 45%;
 }
-.lme-welcome-dot {
-    flex: 0 0 7px;
-    width: 7px;
-    height: 7px;
-    margin: .4em .5rem 0 .3rem;
-    background: #e30613;
-    border-radius: 50%;
+.lme-welcome-photo-unavailable {
+    aspect-ratio: 2.30 / 1;
+    display: grid;
+    place-items: center;
+    border: 1px solid #cbd2da;
+    border-radius: 15px;
+    color: #394758;
+    font-size: .88rem;
+    text-align: center;
+    padding: 1rem;
+}
+.lme-welcome-description {
+    margin: 0;
+    max-width: 34rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #394758;
 }
 /* Welcome header: language at the LEFT edge, About at the RIGHT edge.
    Keep the two actions on one line even when Streamlit stacks columns. */
@@ -223,6 +238,22 @@ body [data-testid="stPopoverBody"]:has(.lme-welcome-language-popup-marker)
     background: #e9ebef !important;
     color: #171717 !important;
 }
+/* Agreed outlined secondary CTA. */
+.st-key-lme_welcome_help_link button {
+    width: 100% !important;
+    min-height: 3.15rem !important;
+    padding: .5rem 1rem !important;
+    background: transparent !important;
+    border: 1.5px solid #394758 !important;
+    border-radius: 10px !important;
+    box-shadow: none !important;
+    color: #394758 !important;
+    font-weight: 700 !important;
+}
+.st-key-lme_welcome_help_link button:hover {
+    background: rgba(57,71,88,.06) !important;
+    color: #27394a !important;
+}
 /* Full-width CTA on both desktop and mobile. */
 .st-key-lme_welcome_explore { max-width: none; }
 .st-key-lme_welcome_explore button {
@@ -253,8 +284,8 @@ body [data-testid="stPopoverBody"]:has(.lme-welcome-language-popup-marker)
         margin-top: 0;
         margin-bottom: .4rem;
     }
-    .st-key-lme_welcome_actions[data-testid="stVerticalBlock"]:has(.st-key-lme_welcome_explore):has(.st-key-lme_welcome_skip_area),
-    .st-key-lme_welcome_actions [data-testid="stVerticalBlock"]:has(.st-key-lme_welcome_explore):has(.st-key-lme_welcome_skip_area) {
+    .st-key-lme_welcome_actions[data-testid="stVerticalBlock"]:has(.st-key-lme_welcome_explore):has(.st-key-lme_welcome_skip_area):not(:has(.st-key-lme_welcome_help_link)),
+    .st-key-lme_welcome_actions [data-testid="stVerticalBlock"]:has(.st-key-lme_welcome_explore):has(.st-key-lme_welcome_skip_area):not(:has(.st-key-lme_welcome_help_link)) {
         display: flex !important;
         flex-direction: column-reverse !important;
     }
@@ -263,20 +294,9 @@ body [data-testid="stPopoverBody"]:has(.lme-welcome-language-popup-marker)
         padding-bottom: .35rem;
     }
 }
-/* Larger, more readable feature list on desktop; mobile stays unchanged. */
 @media (min-width: 1024px) {
-    .lme-welcome-benefit {
-        font-size: clamp(1.125rem, 1.15vw, 1.25rem);
-        line-height: 1.45;
-        margin-bottom: 1.2rem;
-        gap: .85rem;
-    }
-    .lme-welcome-dot {
-        flex: 0 0 9px;
-        width: 9px;
-        height: 9px;
-        margin-top: .58em;
-        margin-right: .45rem;
+    .lme-welcome-description {
+        font-size: clamp(1.035rem, 1.1vw, 1.18rem);
     }
 }
 @media (max-width: 768px) {
@@ -284,16 +304,33 @@ body [data-testid="stPopoverBody"]:has(.lme-welcome-language-popup-marker)
         grid-template-columns: minmax(0, 1fr);
         grid-template-areas: "heading" "graph" "benefits";
         /* Bring the headline close to the minimal About link. */
-        row-gap: .5rem;
-        margin-top: -1.15rem;
+        row-gap: .3rem;
+        margin-top: -1.95rem;
         margin-bottom: .1rem;
     }
     .lme-welcome-heading, .lme-welcome-benefits { align-self: auto; }
     /* Fine-tune only the mobile composition. Desktop stays untouched. */
-    .lme-welcome-graph { margin-top: -.55rem; }
-    .lme-welcome-headline { font-size: clamp(2rem, 8.4vw, 2.5rem); }
-    .lme-welcome-preview { padding: .65rem .55rem .3rem; border-radius: 16px; }
-    .lme-welcome-benefit { font-size: .92rem; margin-bottom: .68rem; }
+    /* Less blank space between the title and the image. */
+    .lme-welcome-graph { margin-top: -.82rem; }
+    .lme-welcome-headline {
+        font-size: clamp(2rem, 10vw, 2.5rem);
+        line-height: 1.1;
+    }
+    /* On phones, show the COMPLETE documentary photograph instead of
+       cropping it to a shallow banner. The surrounding workplace remains
+       visible, while desktop keeps its original panoramic composition. */
+    .lme-welcome-photo {
+        aspect-ratio: auto;
+        height: auto;
+    }
+    .lme-welcome-photo img {
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+        object-position: center;
+    }
+    .lme-welcome-photo-unavailable { aspect-ratio: 2.10 / 1; }
+    .lme-welcome-description { font-size: .95rem; line-height: 1.45; }
     .st-key-lme_welcome_explore { max-width: none; }
     /* Keep the lower-right Streamlit hosting badge away from the checkbox. */
     .st-key-lme_welcome_skip_area {
@@ -305,36 +342,101 @@ body [data-testid="stPopoverBody"]:has(.lme-welcome-language-popup-marker)
 """
 
 
+# The bucket photo is for local prototype testing only. Redistribution rights
+# have not been confirmed; clear permission or replace it before publishing.
+_BUCKET_PHOTO = (
+    "workers_bucket",
+    "https://www.loopbaancentraal.nl/resources/uploads/images/schaftpauze_medewerkers_bouw.jpg",
+)
+
+
+def _photo_uri(stem: str, url: str) -> str | None:
+    """Serve the original photo as a local inline image; download once if needed.
+
+    Users may also place `assets/welcome/<stem>.jpg` or `.png` manually.
+    No external browser hotlinking is needed once the image is available.
+    """
+    folder = Path(__file__).resolve().parent / "assets" / "welcome"
+    existing = next((folder / f"{stem}{ext}" for ext in (".jpg", ".jpeg", ".png")
+                    if (folder / f"{stem}{ext}").is_file()), None)
+    if existing is None:
+        if st.session_state.get(f"lme_photo_download_failed_{stem}"):
+            return None
+        try:
+            req = Request(url, headers={
+                "User-Agent": "Mozilla/5.0 (compatible; LME-Welcome-prototype/1.0)",
+                "Accept": "image/avif,image/webp,image/png,image/jpeg,*/*",
+            })
+            with urlopen(req, timeout=7) as response:
+                raw = response.read(9_000_000)
+            is_jpeg = raw.startswith(b"\xff\xd8\xff")
+            is_png = raw.startswith(b"\x89PNG\r\n\x1a\n")
+            if len(raw) < 5000 or not (is_jpeg or is_png):
+                raise ValueError("Response was not a supported image")
+            folder.mkdir(parents=True, exist_ok=True)
+            existing = folder / f"{stem}{'.jpg' if is_jpeg else '.png'}"
+            existing.write_bytes(raw)
+        except (OSError, ValueError, TimeoutError) as exc:
+            # Only a local preview: do not stop Welcome/Explorer from loading.
+            st.session_state[f"lme_photo_download_failed_{stem}"] = str(exc)
+            return None
+
+    try:
+        raw = existing.read_bytes()
+        if raw.startswith(b"\xff\xd8\xff"):
+            media = "image/jpeg"
+        elif raw.startswith(b"\x89PNG\r\n\x1a\n"):
+            media = "image/png"
+        else:
+            return None
+        # Optional optimization: reduce the large Wikimedia original from
+        # ~5 MB to a web-sized JPEG when Pillow is installed in the project.
+        try:
+            from PIL import Image
+            image = Image.open(io.BytesIO(raw))
+            if image.width > 1600 or len(raw) > 1_000_000:
+                image.thumbnail((1600, 1100))
+                out = io.BytesIO()
+                image.convert("RGB").save(out, format="JPEG", quality=83, optimize=True)
+                raw = out.getvalue()
+                media = "image/jpeg"
+        except (ImportError, OSError):
+            pass
+        return f"data:{media};base64,{base64.b64encode(raw).decode('ascii')}"
+    except OSError:
+        return None
+
+
+def _welcome_photo_html(lang: str) -> tuple[str, bool]:
+    """Return one static photograph HTML fragment and its availability status."""
+    uri = _photo_uri(*_BUCKET_PHOTO)
+    if not uri:
+        msg = (
+            "Photo unavailable — see installation instructions"
+            if lang == "En" else
+            "Foto nicht verfügbar – siehe Installationsanleitung"
+        )
+        return f'<div class="lme-welcome-photo-unavailable">{html.escape(msg)}</div>', True
+    alt = (
+        "Construction workers eating lunch in a front-loader bucket"
+        if lang == "En" else
+        "Bauarbeiter bei der Mittagspause in einer Radladerschaufel"
+    )
+    return (f'<div class="lme-welcome-photo">'
+            f'<img src="{uri}" alt="{html.escape(alt, quote=True)}">'
+            '</div>'), False
+
+
 _WELCOME_CONTENT = """
 <div class="lme-welcome-grid">
   <div class="lme-welcome-heading">
     <h1 class="lme-welcome-headline">{headline}</h1>
   </div>
   <div class="lme-welcome-graph">
-    <div class="lme-welcome-preview">
-      <svg viewBox="0 0 420 260" role="img"
-        aria-label="{graph_aria}"
-        xmlns="http://www.w3.org/2000/svg">
-        <g stroke="#e6e8eb" stroke-width="1">
-          <path d="M8 45H412 M8 95H412 M8 145H412 M8 195H412"/>
-        </g>
-        <path d="M8 165 C60 171 85 115 135 135 S200 194 245 120 S340 120 412 30"
-          fill="none" stroke="#e30613" stroke-width="4" stroke-linecap="round"/>
-        <path d="M8 199 C76 167 105 200 155 164 S231 161 285 119 S358 154 412 110"
-          fill="none" stroke="#4c78a8" stroke-width="4" stroke-linecap="round"/>
-        <path d="M8 230 C65 227 108 214 160 210 S236 197 297 211 S364 173 412 179"
-          fill="none" stroke="#59a14f" stroke-width="3.5" stroke-linecap="round"/>
-        <text x="10" y="253" font-size="12" fill="#98a2b3">{graph_caption}</text>
-      </svg>
-    </div>
+    <div class="lme-welcome-preview">{photo}</div>
   </div>
   <div class="lme-welcome-benefits">
-    <div class="lme-welcome-benefit"><span class="lme-welcome-dot" aria-hidden="true"></span>
-      <span>{benefit_1}</span></div>
-    <div class="lme-welcome-benefit"><span class="lme-welcome-dot" aria-hidden="true"></span>
-      <span>{benefit_2}</span></div>
-    <div class="lme-welcome-benefit"><span class="lme-welcome-dot" aria-hidden="true"></span>
-      <span>{benefit_3}</span></div>
+    <p class="lme-welcome-description">{description}</p>
   </div>
 </div>
 """
@@ -346,6 +448,7 @@ def render_welcome(
     skip_default: bool = False,
     on_skip_change: Callable[[], None] | None = None,
     language: str = "En",
+    on_help: Callable[[], None] | None = None,
 ) -> bool:
     """Render Welcome, keeping the checkbox in sync with the saved preference."""
     st.markdown(_WELCOME_STYLE, unsafe_allow_html=True)
@@ -392,20 +495,41 @@ def render_welcome(
             if st.button("About ↗", key="lme_welcome_about"):
                 on_about()
 
+    photo, missing_photo = _welcome_photo_html(lang)
+    # Localized copy is kept here so this visual-only patch requires no
+    # changes to shared Explorer and Help translations.
+    headline = (
+        '<span class="lme-welcome-line">Labour market</span><br>'
+        '<span class="lme-welcome-line">in numbers.</span>'
+        if lang == "En" else
+        '<span class="lme-welcome-line">Arbeitsmarkt</span><br>'
+        '<span class="lme-welcome-line">in Zahlen.</span>'
+    )
+    description = (
+        "Compare occupations. Follow employment, unemployment and vacancies over time."
+        if lang == "En" else
+        "Berufe vergleichen. Beschäftigung, Arbeitslosigkeit und offene Stellen im Zeitverlauf verfolgen."
+    )
     content = _WELCOME_CONTENT.format(
-        headline=html.escape(tr("Explore the labour market.", lang)).replace("|", "<br>")
-        if lang == "De" else "Explore the<br>labour market.",
-        graph_aria=html.escape(tr("Illustrative trend lines, not real statistics", lang), quote=True),
-        graph_caption=html.escape(tr("Illustrative preview · Germany", lang)),
-        benefit_1=html.escape(tr("Browse hundreds of occupations", lang)),
-        benefit_2=html.escape(tr("Compare employment and vacancies", lang)),
-        benefit_3=html.escape(tr("Understand changes over time", lang)),
+        headline=headline,
+        photo=photo,
+        description=html.escape(description),
     )
     st.markdown(content, unsafe_allow_html=True)
+    if missing_photo:
+        st.caption(
+            "Welcome photo unavailable. See README for local image installation."
+            if lang == "En" else
+            "Welcome-Foto fehlt. Siehe README zur lokalen Installation."
+        )
 
     with st.container(key="lme_welcome_actions"):
         if st.button(f"{tr('Start exploring', lang)} →", key="lme_welcome_explore", width="stretch"):
             on_explore()
+        if on_help is not None:
+            with st.container(key="lme_welcome_help_link"):
+                if st.button(f"{tr('How it works', lang)} →", key="lme_welcome_help", type="tertiary", width="stretch"):
+                    on_help()
         with st.container(key="lme_welcome_skip_area"):
             skip = st.checkbox(
                 tr("Don't show this again", lang),

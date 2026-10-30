@@ -2,3 +2,6 @@
 
 [client]
 toolbarMode = "minimal"
+
+[theme]
+paddingTop = "0.5rem"

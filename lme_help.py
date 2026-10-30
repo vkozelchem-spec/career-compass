@@ -183,7 +183,7 @@ _HELP_CSS = """
 .lme-help-inline-control .label { color:#51637b; font-size:.73rem; }
 .lme-help-mobile-compare { width:27px; height:27px; background:#435d7c; border-radius:7px; display:grid; place-items:center; }
 .lme-help-mobile-compare img { width:23px; height:23px; object-fit:contain; display:block; }
-.lme-help-hero-icon img { width:31px; height:31px; object-fit: contain; display:block; }
+.lme-help-question { color:#f0f5fb; font-size:2rem; font-weight:700; line-height:1; display:block; }
 .lme-help-takeaway { font-size:.79rem; color:#4a5d77; line-height:1.43; margin:.5rem 0 0; }
 @media (max-width: 520px) {
     .stMainBlockContainer:has(.lme-help-root) {
@@ -273,7 +273,6 @@ def render_help(
     one = _image_uri("help_one_plot.jpg")
     overlay = _image_uri("help_overlay_plot.jpg")
     indexed = _image_uri("help_indexed_plot.jpg")
-    map_icon = "data:image/png;base64," + base64.b64encode((_ASSETS / "help_map_icon.png").read_bytes()).decode("ascii")
     compare_icon = "data:image/png;base64," + base64.b64encode((_ASSETS / "help_compare_icon.png").read_bytes()).decode("ascii")
 
     markup = f"""
@@ -282,7 +281,7 @@ def render_help(
         <div><h1>{t('How it works')}</h1>
         <p>{t('A quick guide to exploring occupations and labour market trends.')}</p></div>
         <div class="lme-help-hero-icon" aria-hidden="true">
-          <img src="{map_icon}" alt="" />
+          <span class="lme-help-question">?</span>
         </div>
       </header>
       <article class="lme-help-step">

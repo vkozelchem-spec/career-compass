@@ -43,5 +43,6 @@ def browser_skip_welcome(*, write: bool | None = None) -> bool | None:
         data={"write": write},
         default={"value": None},
         on_value_change=lambda: None,
+        height=0,  # Invisible localStorage bridge; no layout space.
     )
     return result.value

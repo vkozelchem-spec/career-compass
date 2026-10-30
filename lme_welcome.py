@@ -451,7 +451,7 @@ def render_welcome(
     on_help: Callable[[], None] | None = None,
 ) -> bool:
     """Render Welcome, keeping the checkbox in sync with the saved preference."""
-    st.markdown(_WELCOME_STYLE, unsafe_allow_html=True)
+    st.html(_WELCOME_STYLE)
 
     # Streamlit removes widget state when an element is not rendered, e.g. while
     # Explorer is visible. Restore it from the app-level preference on return.

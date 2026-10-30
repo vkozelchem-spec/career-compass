@@ -361,7 +361,7 @@ def _render_mobile_about():
 
     st.html(_ABOUT_MOBILE_CSS)
     with st.container(key="lme_about_mobile"):
-        st.markdown(lme_home_button_style(), unsafe_allow_html=True)
+        st.html(lme_home_button_style())
         with st.container(key="lme_about_mobile_nav"):
             home_col, back_col = st.columns([1, 1], vertical_alignment="center")
             with home_col:

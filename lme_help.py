@@ -254,11 +254,11 @@ def render_help(
     """Render scrolling Help without loading any Explorer datasets."""
     lang = language if language in ("En", "De") else "En"
     t = lambda english: _text(english, lang)
-    st.markdown(_HELP_CSS, unsafe_allow_html=True)
+    st.html(_HELP_CSS)
 
     # Reuse the exact Home button styling and widget key from Explorer.
     # Only one of Explorer and Help renders on a given run.
-    st.markdown(lme_home_button_style(), unsafe_allow_html=True)
+    st.html(lme_home_button_style())
     with st.container(key="lme_help_nav"):
         home_col, back_col = st.columns([1, 1], vertical_alignment="center", gap="small")
         with home_col:
@@ -315,7 +315,7 @@ def render_help(
         </div>
       </article>
       <article class="lme-help-step">
-        <div class="lme-help-heading"><span class="lme-help-number">2</span><h2>{t('One chart')}</h2></div>
+        <div class="lme-help-heading"><span class="lme-help-number">2</span><h2>{t('One occupation')}</h2></div>
         <p class="lme-help-description">{t('One shows how a single occupation changes over time. You can show or hide indicators below the chart.')}</p>
         <div class="lme-help-chart" role="group" aria-label="{t('Real chart: Software development and programming')}">
           <div class="lme-help-chart-header"><div class="lme-help-series">{t('Software development and programming')}</div></div>
@@ -324,7 +324,7 @@ def render_help(
         </div>
       </article>
       <article class="lme-help-step">
-        <div class="lme-help-heading"><span class="lme-help-number">3</span><h2>{t('Overlay')}</h2></div>
+        <div class="lme-help-heading"><span class="lme-help-number">3</span><h2>{t('Compare two occupations')}</h2></div>
         <p class="lme-help-description">{t('Overlay compares two occupations on one chart. Tap the comparison icon to open a second selection panel.')}</p>
         <div class="lme-help-inline-control"><div class="lme-help-mobile-compare" aria-hidden="true">
             <img src="{compare_icon}" alt="" />

@@ -12,7 +12,7 @@ LOGO_PATH = ASSETS_DIR / "LME.png"
 def apply_app_style() -> None:
     """Apply the shared visual style used across the application."""
 
-    st.markdown(
+    st.html(
         """
         <style>
 
@@ -664,9 +664,17 @@ def apply_app_style() -> None:
         }
 
         
+
+        /* LME_COMPACT_MOBILE_TOP_20261030: one shared mobile rule.
+           Avoid moving entire pages with negative margins. */
+        @media (max-width: 768px) {
+            .stApp [data-testid="stMainBlockContainer"],
+            .stApp .stMainBlockContainer {
+                padding-top: 0.5rem !important;
+            }
+        }
         </style>
         """,
-        unsafe_allow_html=True,
     )
 
 

@@ -1,6 +1,8 @@
 """Explorer EN/DE user-facing strings; language never changes data keys."""
 
 DE = {
+    "One occupation": "Ein Beruf",
+    "Compare two occupations": "Zwei Berufe vergleichen",
     # Verified real KldB example in How it works
     'KldB hierarchy — a real example': 'KldB-Hierarchie – ein echtes Beispiel',
     'Natural sciences, geography and IT': 'Naturwissenschaft, Geografie und Informatik',

@@ -1113,8 +1113,8 @@ def _explorer_header_style() -> str:
 
 def _render_explorer_header():
     """Two logical groups: navigation/language left; data modes/layout right."""
-    st.markdown(_explorer_header_style(), unsafe_allow_html=True)
-    st.markdown(lme_home_button_style(), unsafe_allow_html=True)
+    st.html(_explorer_header_style())
+    st.html(lme_home_button_style())
 
     # EN/DE changes display strings only; selected KldB codes remain stable.
     if st.session_state.get("lme_language") not in ("En", "De"):

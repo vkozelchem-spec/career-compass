@@ -1883,7 +1883,6 @@ def render_chart(
             on_change=remember_qualification,
             disabled=len(qualification_options) == 1,
             label_visibility="collapsed",
-            wrap=False,  # Keep all five levels in one swipeable row on mobile.
             width="content",
         )
         if selected_qualification not in qualification_options:

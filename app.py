@@ -200,6 +200,7 @@ def _lme_mobile_plot_theme(chart):
             tickColor="#677586",
             domainColor="#677586",
         )
+        .configure_axisX(grid=False)  # LME_MOBILE_GRID_AND_DROPDOWN_FIX_20261029
     )
 
 
@@ -1074,6 +1075,20 @@ if _lme_viewport_mode in ("portrait", "landscape"):
     div[class*="st-key-occupation_picker_row_"]
     [data-testid="stSelectbox"] [data-baseweb="select"] :is(svg, svg *) {
         color: #f5f8fc !important;
+        stroke: currentColor !important;
+    }
+    /* LME mobile occupation selectbox, including the arrow's inner wrapper. */
+    div[class*="st-key-occupation_picker_row_"]
+    [data-testid="stSelectbox"] [data-baseweb="select"]
+    :is(div, button, span, [role="combobox"]) {
+        background-color: #2d3b4c !important;
+        background-image: none !important;
+    }
+    div[class*="st-key-occupation_picker_row_"]
+    [data-testid="stSelectbox"] [data-baseweb="select"]
+    :is(svg, svg *) {
+        color: #f5f8fc !important;
+        fill: currentColor !important;
         stroke: currentColor !important;
     }
     </style>""")

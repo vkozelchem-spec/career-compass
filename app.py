@@ -31,6 +31,29 @@ st.set_page_config(page_title="Explore labour market", page_icon="🧭", layout=
 
 apply_app_style()
 
+# LME_MOBILE_PUBLIC_SHELL_20261030
+# Presentation only: normal URL (not ?embed=true). Do not alter charts or desktop.
+st.html("""<style>
+@media screen and (max-width: 768px) {
+    /* Streamlit's native chrome consumes a large strip above the LME toolbar.
+       The app has its own Home / Help / About navigation on these screens. */
+    header[data-testid="stHeader"],
+    [data-testid="stAppHeader"],
+    [data-testid="stToolbar"],
+    [data-testid="stDecoration"] {
+        display: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+    }
+    /* Strip away the gap previously reserved for Streamlit's top header. */
+    .stApp .stMainBlockContainer,
+    .stApp [data-testid="stMainBlockContainer"],
+    .stApp .stMainBlockContainer:has(.lme-help-root) {
+        padding-top: 0.45rem !important;
+    }
+}
+</style>""")
+
 # Browser-side preference storage. A v2 component reads and writes localStorage
 # on the same browser origin. No user setting is stored on the shared server.
 from lme_browser_storage import browser_skip_welcome
@@ -1860,6 +1883,7 @@ def render_chart(
             on_change=remember_qualification,
             disabled=len(qualification_options) == 1,
             label_visibility="collapsed",
+            wrap=False,  # Keep all five levels in one swipeable row on mobile.
             width="content",
         )
         if selected_qualification not in qualification_options:

@@ -4,3 +4,5 @@
 toolbarMode = "minimal"
 
 [theme]
+paddingTop = "0.75rem"
+

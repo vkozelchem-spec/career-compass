@@ -418,6 +418,89 @@ if _lme_viewport_mode in ("portrait", "landscape"):
         </style>"""
     )
 
+# LME_MOBILE_CHART_FULLSCREEN_AND_CLIP_FIX_20261031
+# CSS-only: keep the actual Vega drawing surface rectangular (so tick labels
+# cannot be clipped by its rounded viewport), while keeping card corners round.
+# Also paint Streamlit's native fullscreen frame dark rather than white.
+# Restrict to phone layouts; do not affect desktop charts or chart specs.
+if _lme_viewport_mode in ("portrait", "landscape"):
+    st.html("""<style>
+    /* ui.py rounds and clips all stVegaLiteChart elements; override only
+       Explorer plots, not the outer rounded chart card. */
+    :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+    [data-testid="stVegaLiteChart"],
+    :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+    [data-testid="stVegaLiteChart"] .vega-embed {
+        border-radius: 0 !important;
+        overflow: visible !important;
+        clip-path: none !important;
+    }
+    :is(.st-key-chart_a, .st-key-chart_b, .st-key-combined_chart)
+    [data-testid="stVegaLiteChart"] :is(canvas, svg) {
+        border-radius: 0 !important;
+    }
+
+    /* Streamlit can implement fullscreen by enlarging its own frame rather
+       than entering the browser Fullscreen API. Keep those frame wrappers
+       dark in both cases (they are already inside dark chart cards normally). */
+    body:has(.st-key-lme_explorer_toolbar)
+    [data-testid="stFullScreenFrame"]:has([data-testid="stVegaLiteChart"]),
+    body:has(.st-key-lme_explorer_toolbar)
+    [data-testid="stArrowVegaLiteChart"]:has([data-testid="stVegaLiteChart"]) {
+        background: #0e1117 !important;
+        background-color: #0e1117 !important;
+        color: #f5f8fc !important;
+    }
+
+    /* Also cover the actual browser Fullscreen API where supported. */
+    :fullscreen:has([data-testid="stVegaLiteChart"]),
+    :is([data-testid="stFullScreenFrame"],
+        [data-testid="stArrowVegaLiteChart"],
+        [data-testid="stVegaLiteChart"]):fullscreen,
+    :fullscreen:has([data-testid="stVegaLiteChart"])
+    :is([data-testid="stFullScreenFrame"],
+        [data-testid="stArrowVegaLiteChart"],
+        [data-testid="stVegaLiteChart"], .vega-embed) {
+        background: #0e1117 !important;
+        background-color: #0e1117 !important;
+        border-radius: 0 !important;
+        color: #f5f8fc !important;
+    }
+    :fullscreen:has([data-testid="stVegaLiteChart"]) > div,
+    :fullscreen:has([data-testid="stVegaLiteChart"]) > div > div {
+        background-color: #0e1117 !important;
+    }
+    :fullscreen:has([data-testid="stVegaLiteChart"])::backdrop,
+    :is([data-testid="stFullScreenFrame"],
+        [data-testid="stArrowVegaLiteChart"],
+        [data-testid="stVegaLiteChart"]):fullscreen::backdrop {
+        background: #0e1117 !important;
+    }
+
+    /* Older app CSS explicitly sets the fullscreen toolbar pill white.
+       Make the exit/fullscreen control legible over the new dark surface. */
+    :fullscreen:has([data-testid="stVegaLiteChart"])
+    [data-testid="stElementToolbarButtonContainer"],
+    :is([data-testid="stFullScreenFrame"],
+        [data-testid="stArrowVegaLiteChart"],
+        [data-testid="stVegaLiteChart"]):fullscreen
+    [data-testid="stElementToolbarButtonContainer"] {
+        background: #253246 !important;
+        border-radius: 8px !important;
+    }
+    :fullscreen:has([data-testid="stVegaLiteChart"])
+    :is([data-testid="stElementToolbar"], .stElementToolbar)
+    :is(button, svg),
+    :is([data-testid="stFullScreenFrame"],
+        [data-testid="stArrowVegaLiteChart"],
+        [data-testid="stVegaLiteChart"]):fullscreen
+    :is([data-testid="stElementToolbar"], .stElementToolbar)
+    :is(button, svg) {
+        color: #f5f8fc !important;
+    }
+    </style>""")
+
+
 # Indicator buttons live beneath each chart and act as its interactive legend.
 # On narrow screens show two legend items per row, never four vertical blocks.
 st.html(

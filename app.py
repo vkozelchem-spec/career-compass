@@ -1356,6 +1356,42 @@ if _lme_viewport_mode in ("portrait", "landscape"):
     }
     </style>""")
 
+
+
+# LME_OVERLAY_FULLSCREEN_TRANSPARENT_ICON_20261031
+# Mobile Overlay fullscreen: match the minimal exit icon in One fullscreen.
+# Streamlit's frame is CSS-fixed; the existing observer marks it as expanded.
+if _lme_viewport_mode in ("portrait", "landscape"):
+    st.html(r"""<style>
+    /* Keep the EXIT icon in its current (correct) top-right position;
+       only remove all painted layers of its slate button square. */
+    .st-key-combined_chart
+    [data-testid="stFullScreenFrame"][data-lme-overlay-expanded="true"]
+    :is([data-testid="stElementToolbar"], .stElementToolbar,
+        [data-testid="stElementToolbarButtonContainer"]),
+    .st-key-combined_chart
+    [data-testid="stFullScreenFrame"][data-lme-overlay-expanded="true"]
+    :is([data-testid="stElementToolbar"], .stElementToolbar)
+    :is([data-testid="stElementToolbarButton"], button),
+    .st-key-combined_chart
+    [data-testid="stFullScreenFrame"][data-lme-overlay-expanded="true"]
+    :is([data-testid="stElementToolbar"], .stElementToolbar)
+    :is([data-testid="stElementToolbarButton"], button):hover {
+        background: transparent !important;
+        background-color: transparent !important;
+        background-image: none !important;
+        border-color: transparent !important;
+        box-shadow: none !important;
+    }
+    /* Keep the icon visible without changing its existing hit target. */
+    .st-key-combined_chart
+    [data-testid="stFullScreenFrame"][data-lme-overlay-expanded="true"]
+    :is([data-testid="stElementToolbar"], .stElementToolbar)
+    :is(button, button svg) {
+        color: #f5f8fc !important;
+    }
+    </style>""")
+
 #st.title("Explore the labour market")
 
 if not LABOUR_MARKET_DATA_PATH.exists():

@@ -170,11 +170,49 @@ export default function({ data, setStateValue }) {
         debounceId = window.setTimeout(reportViewport, 180);
     };
 
+    // Detect only the OVERLAY chart's Streamlit expanded frame. The native
+    // Streamlit fullscreen is CSS position:fixed, not the browser Fullscreen API.
+    // Mirror that state to a data attribute used by the Overlay-only CSS.
+    const overlayFrameSelector =
+        ".st-key-combined_chart [data-testid='stFullScreenFrame']";
+    let observedOverlayFrame = null;
+    const syncOverlayExpanded = () => {
+        if (!observedOverlayFrame || !observedOverlayFrame.isConnected) return;
+        const isExpanded = window.getComputedStyle(observedOverlayFrame).position === "fixed";
+        const value = isExpanded ? "true" : "false";
+        if (observedOverlayFrame.dataset.lmeOverlayExpanded !== value) {
+            observedOverlayFrame.dataset.lmeOverlayExpanded = value;
+        }
+    };
+    const overlayResizeObserver = new ResizeObserver(syncOverlayExpanded);
+    const overlayAttributesObserver = new MutationObserver(syncOverlayExpanded);
+    const bindOverlayFrame = () => {
+        const nextFrame = document.querySelector(overlayFrameSelector);
+        if (nextFrame !== observedOverlayFrame) {
+            overlayResizeObserver.disconnect();
+            overlayAttributesObserver.disconnect();
+            observedOverlayFrame = nextFrame;
+            if (nextFrame) {
+                overlayResizeObserver.observe(nextFrame);
+                overlayAttributesObserver.observe(nextFrame, {
+                    attributes: true, attributeFilter: ["class", "style"]
+                });
+            }
+        }
+        syncOverlayExpanded();
+    };
+    const overlayDomObserver = new MutationObserver(bindOverlayFrame);
+    overlayDomObserver.observe(document.body, { childList: true, subtree: true });
+    bindOverlayFrame();
+
     reportViewport();
     window.addEventListener("resize", onResize);
     return () => {
         window.removeEventListener("resize", onResize);
         window.clearTimeout(debounceId);
+        overlayDomObserver.disconnect();
+        overlayAttributesObserver.disconnect();
+        overlayResizeObserver.disconnect();
     };
 }
 """
@@ -1196,6 +1234,70 @@ if _lme_viewport_mode in ("portrait", "landscape"):
         color: #f5f8fc !important;
         fill: currentColor !important;
         stroke: currentColor !important;
+    }
+    </style>""")
+
+
+
+# LME_OVERLAY_FULLSCREEN_AND_SELECT_FIX_20261031
+# Only mobile Explorer; desktop, source data, chart axes and One fullscreen stay as is.
+if _lme_viewport_mode in ("portrait", "landscape"):
+    st.html(r"""<style>
+    /* Mobile occupation selector: the Streamlit 1.66 arrow lives in a new
+       control structure, so old [data-baseweb=select] descendants do not
+       cover its white chevron segment reliably. Paint a visual right cap. */
+    div[class*="st-key-occupation_picker_row_"] [data-testid="stSelectbox"] {
+        position: relative !important;
+        isolation: isolate;
+    }
+    div[class*="st-key-occupation_picker_row_"] [data-testid="stSelectbox"]::after {
+        content: "";
+        position: absolute;
+        z-index: 3;
+        pointer-events: none;
+        right: 1px;
+        top: 1px;
+        bottom: 1px;
+        width: 39px;
+        border-radius: 0 8px 8px 0;
+        background-color: #252936;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f5f8fc' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 19px 19px;
+    }
+    /* Preserve accessible focus, but use the Slate palette, not red. */
+    div[class*="st-key-occupation_picker_row_"] [data-testid="stSelectbox"]:focus-within
+    :is([role="combobox"], [data-baseweb="select"] > div) {
+        border-color: #a6b8ce !important;
+        outline-color: #a6b8ce !important;
+        box-shadow: 0 0 0 1px #a6b8ce !important;
+    }
+    /* Fix ONLY Overlay when Streamlit's CSS-expanded fullscreen is active.
+       The normal Overlay toolbar stays by the first occupation legend line. */
+    .st-key-combined_chart
+    [data-testid="stFullScreenFrame"][data-lme-overlay-expanded="true"]
+    :is([data-testid="stElementToolbar"], .stElementToolbar),
+    .st-key-combined_chart
+    [data-testid="stFullScreenFrame"][data-lme-overlay-expanded="true"]
+    :is([data-testid="stElementToolbar"], .stElementToolbar):hover {
+        position: absolute !important;
+        inset: 36px 10px auto auto !important;
+        top: 36px !important;
+        right: 10px !important;
+        bottom: auto !important;
+        left: auto !important;
+        transform: none !important;
+        z-index: 100 !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    .st-key-combined_chart
+    [data-testid="stFullScreenFrame"][data-lme-overlay-expanded="true"]
+    [data-testid="stElementToolbarButtonContainer"] {
+        background: #253246 !important;
+        border-radius: 7px !important;
+        border: 0 !important;
     }
     </style>""")
 

@@ -1301,6 +1301,61 @@ if _lme_viewport_mode in ("portrait", "landscape"):
     }
     </style>""")
 
+
+
+# LME_OVERLAY_EXIT_AND_MOBILE_FOCUS_POLISH_20261031
+# Follow-up to the previous mobile Overlay fix. Keep One fullscreen untouched.
+if _lme_viewport_mode in ("portrait", "landscape"):
+    st.html(r"""<style>
+    /* The red rim on a touched mobile occupation picker is Streamlit's
+       normal primary-colour focus treatment. Retain a readable SLATE focus
+       colour instead, scoped to these two selectors. */
+    div[class*="st-key-occupation_picker_row_"] [data-testid="stSelectbox"]:focus-within,
+    div[class*="st-key-occupation_picker_row_"] [data-testid="stSelectbox"]:focus-within [data-baseweb="select"],
+    div[class*="st-key-occupation_picker_row_"] [data-testid="stSelectbox"]:focus-within [data-baseweb="select"] > div,
+    div[class*="st-key-occupation_picker_row_"] [data-testid="stSelectbox"]:focus-within [role="combobox"] {
+        border-color: #a6b8ce !important;
+        outline-color: #a6b8ce !important;
+        box-shadow: none !important;
+    }
+    /* Accent at the visible outer edge. These selectors don't style the
+       dropdown's option list, so the opened search remains unchanged. */
+    div[class*="st-key-occupation_picker_row_"] [data-testid="stSelectbox"]:focus-within [data-baseweb="select"] > div,
+    div[class*="st-key-occupation_picker_row_"] [data-testid="stSelectbox"]:focus-within [role="combobox"] {
+        box-shadow: 0 0 0 1px #a6b8ce !important;
+    }
+    /* Keyboard-only focus stays visible, for accessibility. */
+    div[class*="st-key-occupation_picker_row_"] [data-testid="stSelectbox"] :is(input, [role="combobox"]):focus-visible {
+        outline: 2px solid #a6b8ce !important;
+        outline-offset: 1px !important;
+    }
+
+    /* Streamlit's expanded chart frame is POSITION:FIXED, not necessarily
+       the browser :fullscreen pseudo-class. The previous patch already sets
+       data-lme-overlay-expanded=true on THAT frame via MutationObserver.
+       Position the EXIT TOOLBAR relative to the phone viewport, not the
+       chart's plotting area. This prevents it sitting around the 360k tick. */
+    .st-key-combined_chart
+    [data-testid="stFullScreenFrame"][data-lme-overlay-expanded="true"]
+    :is([data-testid="stElementToolbar"], .stElementToolbar),
+    .st-key-combined_chart
+    [data-testid="stFullScreenFrame"][data-lme-overlay-expanded="true"]
+    :is([data-testid="stElementToolbar"], .stElementToolbar):hover {
+        position: fixed !important;
+        inset: 12px 12px auto auto !important;
+        top: 12px !important;
+        right: 12px !important;
+        bottom: auto !important;
+        left: auto !important;
+        margin: 0 !important;
+        transform: none !important;
+        z-index: 1000 !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+    }
+    </style>""")
+
 #st.title("Explore the labour market")
 
 if not LABOUR_MARKET_DATA_PATH.exists():

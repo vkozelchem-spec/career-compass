@@ -677,7 +677,6 @@ def apply_app_style() -> None:
         """,
     )
 
-    print("[LME HEADER DEBUG] context.url =", repr(st.context.url), flush=True)
 
     # Extra top spacing for Streamlit Cloud on desktop only
     if (st.context.url or "").startswith(

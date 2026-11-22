@@ -53,7 +53,7 @@ def apply_app_style() -> None:
 
         /* Main Streamlit content area */
         .stMainBlockContainer {
-            padding-top: 1.25rem;
+            /* Streamlit controls top spacing via theme.paddingTop and header height. */
             padding-bottom: 2.5rem;
         }
 
@@ -714,13 +714,8 @@ def _explorer_header_style() -> str:
     """
     return """
     <style>
-      /* Explorer only: reduce space above the toolbar on laptop/desktop.
-         Welcome and narrow mobile layouts keep their existing spacing. */
-      @media (min-width: 1051px) {
-          .stMainBlockContainer:has(.st-key-lme_explorer_toolbar) {
-              padding-top: 0.45rem !important;
-          }
-      }
+      /* Desktop Explorer: let Streamlit reserve space for its native header.
+         Do not override theme.paddingTop; mobile rules remain unchanged. */
       .st-key-lme_explorer_toolbar {
           padding-bottom: 0.65rem;
           margin-bottom: 0.7rem;

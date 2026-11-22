@@ -677,6 +677,21 @@ def apply_app_style() -> None:
         """,
     )
 
+    # Extra top spacing for Streamlit Cloud on desktop only
+    if (st.context.url or "").startswith(
+        "https://career-compass-lme.streamlit.app"
+    ):
+        st.html("""
+        <style>
+        @media (min-width: 1051px) {
+            .stMainBlockContainer {
+                padding-top: 70px !important;
+            }
+        }
+        </style>
+        """)
+
+
 
 def _render_information_header():
     """Retain the current informational-page navigation until About is redesigned."""

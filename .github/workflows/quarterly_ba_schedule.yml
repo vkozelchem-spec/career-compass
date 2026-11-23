@@ -1,0 +1,40 @@
+name: Quarterly BA ETL - scheduled check
+
+on:
+  schedule:
+    # Every Monday at 08:17 UTC (09:17 CET / 10:17 CEST)
+    - cron: "17 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-quarterly-ba:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out tested ETL from feature branch
+        uses: actions/checkout@v6
+        with:
+          ref: feature/welcome-page
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: etl/quarterly/requirements-etl.txt
+
+      - name: Install quarterly ETL dependencies
+        run: |
+          python -m pip install -r etl/quarterly/requirements-etl.txt
+
+      - name: Validate Python scripts
+        run: |
+          python -m compileall -q etl/quarterly
+
+      - name: Check Bundesagentur fuer Arbeit for missing quarters (read-only)
+        run: |
+          python etl/quarterly/run_quarterly.py --pages 10
